@@ -55,3 +55,7 @@ Go 전체 tests·race, macOS/Windows vet와 Windows amd64 GUI 교차 빌드를 �
 일반 CI의 명시적 미설정 exe는 오프라인 self-test와 설정 오류 종료만 검사한다. 수동 다운로드 workflow는 설정된 exe의 테스트·검증 후 exe·체크섬·출처 정보를 30일 보관한다. 실제 서버 주소 설정과 해당 다운로드 workflow 실행 결과는 별도 확인 대상이다.
 
 `b95ad874890bc3673a9f71e0eb4c4c86cfa70499`의 [CI](https://github.com/kgskr/llvy-uploader/actions/runs/39187739242)에서 macOS tests/race/vet와 Windows tests/vet, 주소 없는 exe의 self-test·설정 오류 종료, 명시적 합성 HTTPS origin을 주입한 exe의 PE·self-test·설정 검사를 통과했다. 로컬 일반/development origin 검사, 전체 tests/race, host/Windows vet, Windows 교차 빌드·문서·OpenSpec strict도 통과했다. 다운로드 workflow는 등록했으나 실제 `LLVY_SERVER_ORIGIN` repository variable이 미설정이므로 실행·아티팩트 업로드는 아직 검증하지 않았다.
+
+## Windows 전용 CI 검증
+
+`6fa80ad4606b1a563f3ac687f4ee89a2186af69d`의 [Windows CI](https://github.com/kgskr/llvy-uploader/actions/runs/39188530380)는 Windows 작업 하나로 전체 tests/race·vet·gofmt·PE·self-test·주소 주입 검사를 통과했다. race 테스트는 CGo/GCC를 사용하고 배포 exe는 CGo 없이 빌드한다. Go 소스의 LF 체크아웃을 고정했으며 `core.autocrlf=true`인 별도 체크아웃에서 gofmt 검사를 재현·검증했다. macOS 클라우드 작업은 제거했고 Mac 검사는 로컬 개발용으로만 유지한다. 앞선 macOS CI 결과는 당시 구성의 과거 검증 기록이다.

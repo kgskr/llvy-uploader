@@ -81,4 +81,4 @@
 
 ## 16. Windows 전용 CI
 
-- [ ] 16.1 macOS job을 제거하고 검사·다운로드 workflow의 Windows race 검사와 형식 검사를 구성한다. 실제 Windows CI와 문서/strict 검증을 확인한다.
+- [x] 16.1 macOS job을 제거하고 검사·다운로드 workflow의 Windows race 검사와 형식 검사를 구성한다. 실제 Windows CI와 문서/strict 검증을 확인한다.
