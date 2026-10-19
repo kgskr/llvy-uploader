@@ -58,3 +58,8 @@ The client SHALL consume a reviewed copy of LLVY-owned desktop-v1 schemas and fi
 
 - **WHEN** a client release needs an updated server protocol
 - **THEN** the release records the compatible server revision and passing server gates before publishing the executable
+
+#### Scenario: Windows checkout enables automatic CRLF conversion
+
+- **WHEN** Git checks out the pinned contract JSON with `core.autocrlf=true`
+- **THEN** repository attributes preserve LF bytes and the original SHA-256 verification succeeds without normalizing or changing the pinned contract

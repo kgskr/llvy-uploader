@@ -47,7 +47,7 @@ PE 검사는 명시적 import table의 DLL을 검사한다. Win32 어댑터가 �
 ## CI와 릴리스 경계
 
 [검사 workflow](../.github/workflows/check.yml)는 고정 action SHA, Go 1.27.0, macOS와 `windows-2025`를 사용한다.
-push·pull request·수동 실행에서 Windows 테스트·vet·빌드·PE 검사·self-test를 실행하도록 구성했지만 아직 실행한 CI 결과는 없다.
+push·pull request·수동 실행에서 Windows 테스트·vet·빌드·PE 검사·self-test를 실행한다. 최초 실행에서 발견한 계약 JSON의 CRLF 체크아웃 문제는 `.gitattributes`의 LF 고정으로 수정했다. 실행별 결과와 남은 범위는 [검증 기록](validation/2026-10-18-server-integration.md#2026-10-19-windows-ci-줄바꿈-수정)을 따른다.
 기본 read 권한과 일반 `pull_request`만 사용하며 비밀값을 요구하지 않는다. 현재 artifact 업로드·GitHub Release 발행은 하지 않는다.
 
 정식 릴리스에는 서버 원본 계약의 commit·체크섬과 호환 서버 검증, Windows 10/11 일반 사용자·한국어 IME·DPI·OneDrive·실제 LoL 경로, Discord·Blob·ROFL 통합 검증이 필요하다.

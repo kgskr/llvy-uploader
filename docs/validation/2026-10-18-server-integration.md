@@ -41,3 +41,9 @@ Go 전체 tests·race·vet, Windows amd64 vet·GUI 교차 빌드, 고정 계약 
 로그인 토큰 교환 후 상태 조회 실패·취소를 합성 HTTP 서버로 재현하고, 다음 로그인 동작이 브라우저 승인 없이 기존 연결의 상태 조회만 재시도함을 검사했다. 완료된 로그아웃 뒤 오래된 session 응답을 화면에 적용하지 않는 경계도 검사했다. 취소된 자동 폴더 탐색·파일 검색은 기존 선택을 보존하고 폴더 선택창을 열지 않으며, 완료된 직접 폴더 선택·로그아웃·기록 삭제는 유지한다. 실제 Win32 화면과 외부 인증 실행은 미검증이다.
 
 Go 전체 tests·race, macOS/Windows vet와 Windows amd64 GUI 교차 빌드를 통과했다. 기기 소유권·UI 상태·통합 회귀를 나눠 독립 검토한 결과 추가 수정이 필요한 결함은 발견되지 않았다. OpenSpec strict와 현재 문서 60개의 상대 링크·앵커 262개, Markdown 형식·공백 검사를 통과했다. 서버 계약과 기능 플래그는 변경하지 않았고 실제 Windows·Blob·Discord 검증 및 운영 배포는 남아 있다.
+
+## 2026-10-19 Windows CI 줄바꿈 수정
+
+[최초 CI](https://github.com/kgskr/llvy-uploader/actions/runs/39184546181)에서 macOS 검사는 통과했으나 Windows는 `TestPinnedServerContract`의 체크섬 검사에 실패했다. Windows의 자동 CRLF 체크아웃 설정으로 계약 JSON 세 파일의 바이트가 바뀌는 현상을 별도 체크아웃에서 재현했다. `.gitattributes`로 해당 JSON의 LF를 고정한 뒤 같은 설정에서 원본 체크섬 세 개가 모두 일치했다. 계약 JSON·원본 revision·체크섬 및 검증 함수는 변경하지 않았다.
+
+수정 커밋의 Windows 테스트·빌드·self-test 결과는 확인 중이다. 일반 사용자 PC·IME·DPI·실제 Blob·Discord 검증은 별도 완료 조건이다.
