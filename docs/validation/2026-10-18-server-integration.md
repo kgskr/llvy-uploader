@@ -59,3 +59,7 @@ Go 전체 tests·race, macOS/Windows vet와 Windows amd64 GUI 교차 빌드를 �
 ## Windows 전용 CI 검증
 
 `6fa80ad4606b1a563f3ac687f4ee89a2186af69d`의 [Windows CI](https://github.com/kgskr/llvy-uploader/actions/runs/39188530380)는 Windows 작업 하나로 전체 tests/race·vet·gofmt·PE·self-test·주소 주입 검사를 통과했다. race 테스트는 CGo/GCC를 사용하고 배포 exe는 CGo 없이 빌드한다. Go 소스의 LF 체크아웃을 고정했으며 `core.autocrlf=true`인 별도 체크아웃에서 gofmt 검사를 재현·검증했다. macOS 클라우드 작업은 제거했고 Mac 검사는 로컬 개발용으로만 유지한다. 앞선 macOS CI 결과는 당시 구성의 과거 검증 기록이다.
+
+## Linux 선행 검사와 Windows 후속 검사
+
+`e4a98af837084902154a798ec373e735c8c4fb24`의 [순차 CI](https://github.com/kgskr/llvy-uploader/actions/runs/39189155781)에서 Linux 공통 tests/race·vet·gofmt가 56초에 통과한 뒤 Windows job이 시작되었고 tests/race·vet·exe·self-test·주소 주입 검사가 1분 36초에 통과했다. 두 workflow의 Windows job은 `needs: linux`에 종속되어 Linux 실패·취소 시 실행되지 않는다. 다운로드 workflow의 동일한 종속성은 구성 검사로 확인했으며 실제 아티팩트 발행은 서버 주소 설정 후 별도 실행 대상이다. 이전 Windows-only CI 기록은 당시 구성의 근거로 보존한다.

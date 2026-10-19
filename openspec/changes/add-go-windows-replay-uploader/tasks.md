@@ -85,4 +85,4 @@
 
 ## 17. Linux 선행 검사와 Windows 후속 검사
 
-- [ ] 17.1 검사·다운로드 workflow에 Linux 공통 tests/race·vet·형식 검사를 추가하고 Windows job을 Linux 성공에 종속시킨다. 실제 순차 CI와 문서/strict 검증을 확인한다.
+- [x] 17.1 검사·다운로드 workflow에 Linux 공통 tests/race·vet·형식 검사를 추가하고 Windows job을 Linux 성공에 종속시킨다. 실제 순차 CI와 문서/strict 검증을 확인한다.
