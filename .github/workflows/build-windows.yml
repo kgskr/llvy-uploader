@@ -22,8 +22,17 @@ jobs:
       - name: Require configured HTTPS server origin
         run: go run ./scripts/validate-origin
       - run: go mod verify
-      - run: go test -timeout 90s ./...
+      - name: Test with Windows race detector
+        env:
+          CGO_ENABLED: "1"
+          CC: gcc
+        run: go test -race -timeout 120s ./...
       - run: go vet ./...
+      - name: Check Go formatting
+        run: |
+          $files = gofmt -l cmd internal scripts
+          if ($LASTEXITCODE -ne 0) { throw 'gofmt failed' }
+          if ($files) { throw "Run gofmt on: $files" }
       - run: ./scripts/build.ps1
       - run: ./scripts/verify-build.ps1
       - name: Store unsigned Windows build

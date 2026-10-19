@@ -34,7 +34,7 @@
 
 ## 8. 독립 빌드와 GitHub Windows CI
 
-- [ ] 8.2 ARM Mac 공통 Go tests/vet/race 검사와 Windows `windows-2025` x64 tests/vet/전용 연동 검증을 구성한다.
+- [ ] 8.2 Windows `windows-2025` x64 tests/race/vet·형식·전용 연동 검증을 구성한다. ARM Mac 검사는 선택적 로컬 검증으로만 둔다.
 - [ ] 8.3 고정 resource 생성 도구로 asInvoker/DPI/icon/version manifest를 포함하고 `CGO_ENABLED=0` GUI exe와 bounded self-test 실행을 검증한다.
 - [ ] 8.4 DLL 의존성, checksum, license/dependency 정보, source commit provenance와 CI artifact 보존 정책을 추가한다.
 - [ ] 8.5 보호된 `uploader-v*` release workflow, fork/PR secret 격리, 서명 상태 표기와 API 호환성 gate를 구성한다.
@@ -78,3 +78,7 @@
 - [x] 15.1 기본 서버 주소를 제거하고 빌드 origin 검증·주입 및 누락 시 실행/배포 차단을 구현한다. 고정 서버 계약 바이트는 유지한다.
 - [x] 15.2 수동 Windows 아티팩트 워크플로와 30일 보관·체크섬·출처 정보를 추가하고 기존 CI의 주소 없는 self-test 빌드를 구분한다.
 - [x] 15.3 origin 회귀 테스트·Go tests/race/vet·Windows 교차 빌드·CI와 문서/strict 검증을 수행한다. 실제 외부 업로드는 별도 완료 조건으로 유지한다.
+
+## 16. Windows 전용 CI
+
+- [ ] 16.1 macOS job을 제거하고 검사·다운로드 workflow의 Windows race 검사와 형식 검사를 구성한다. 실제 Windows CI와 문서/strict 검증을 확인한다.

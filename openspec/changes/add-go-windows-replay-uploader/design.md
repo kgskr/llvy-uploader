@@ -97,8 +97,8 @@ LLVY `desktop-replay-upload-api`의 URL/method/headers/expiresAt descriptor를 �
 
 ### 검증과 릴리스는 Windows 실행 증거를 포함한다
 
-- Mac: 순수 Go 패키지 `go test`, 지원 호스트의 race 검사, `go vet`, matcher/큐/HTTP contract fixture 테스트. `GOOS=windows GOARCH=amd64 CGO_ENABLED=0` 교차 빌드는 컴파일 확인으로만 기록한다.
-- Windows CI: 고정 `windows-2025` x64 runner, 고정 Go 버전과 action commit, `go test ./...`, `go vet ./...`, Windows 전용 discovery/DPAPI/loopback/파일 잠금 및 두 프로세스 단일 인스턴스 테스트, 실제 exe의 명시적 self-test 모드. self-test는 UI/자동 로그인/운영 업로드를 실행하지 않는다.
+- 로컬 Mac(선택): 순수 Go 패키지 `go test`, 지원 호스트의 race 검사, `go vet`, matcher/큐/HTTP contract fixture 테스트. `GOOS=windows GOARCH=amd64 CGO_ENABLED=0` 교차 빌드는 컴파일 확인으로만 기록한다.
+- Windows CI: 고정 `windows-2025` x64 runner, 고정 Go 버전과 action commit, `go test -race -timeout 120s ./...`(CGo/GCC), `go vet ./...`, gofmt, Windows 전용 discovery/DPAPI/loopback/파일 잠금 및 두 프로세스 단일 인스턴스 테스트, 실제 exe의 명시적 self-test 모드. self-test는 UI/자동 로그인/운영 업로드를 실행하지 않는다.
 - 결과물: `-trimpath`, GUI subsystem, 버전/commit resource를 갖는 exe, SHA-256 checksum, 의존성/라이선스 목록과 빌드 provenance. exe 파일만으로 실행되는지 DLL import를 확인한다. UPX 압축은 사용하지 않는다. 바이너리는 Git에 커밋하지 않는다.
 - 통합: mock API의 실패/응답 유실/429/갱신 동시성, TypeScript 계약 fixture, 기존 웹 회귀 및 `npm run check`; 인증·예약 회수 경쟁은 disposable localhost PostgreSQL로 검증한다.
 - 스테이징: 실제 Discord 승인, Go→Blob 전송, 실제 ROFL 파싱/중복, 웹·앱 공유 한도, 기기 회수와 처리 경쟁을 검증한다. 실제 리플레이는 허용된 로컬/보호 fixture로 제공하고 공개 CI artifact에 올리지 않는다.
@@ -173,3 +173,5 @@ PR은 테스트와 비공개/일반 CI artifact까지만, 보호된 `uploader-v*
 GitHub Actions repository variable `LLVY_SERVER_ORIGIN`을 PowerShell 환경변수로 전달하고 Go linker의 `desktop.ServerOrigin`에 주입한다. 주소는 HTTPS origin만 허용하며 사용자 정보·경로·query·fragment·공백을 거부한다. 기본값과 실행 시 환경변수 fallback은 없다. 누락된 배포 빌드는 실패하고, CI의 명시적 `-AllowUnconfigured` 빌드는 self-test만 가능하며 배포하지 않는다. 개발 tag의 loopback HTTP도 기본값 없이 지정한다. 고정 서버 계약의 `productOrigin`은 해당 원본 revision의 배포 메타데이터로 보존하고 앱의 주소 기본값이나 허용 목록으로 사용하지 않는다. API·Blob endpoint/헤더 계약과 체크섬은 그대로 유지한다.
 
 수동 `Build Windows artifact` 워크플로는 주소 검증, Go tests/vet, exe 빌드·PE 검사·self-test를 통과한 뒤 exe·SHA-256·빌드/출처 정보를 Actions 아티팩트로 30일 보관한다. 환경변수 미설정 시 다운로드 산출물을 만들지 않는다. 일반 exe를 위한 Actions 저장소를 사용하며 GitHub Packages·정식 Release·서명 발행은 하지 않는다.
+
+클라우드 CI는 Windows runner만 사용한다. macOS workflow job은 두지 않으며 로컬 Mac 검사는 개발 편의용이다. race 검사만 CGo를 활성화하고 배포 exe는 기존처럼 `CGO_ENABLED=0`으로 빌드한다. 검사 workflow와 다운로드 workflow 모두 같은 Windows race 검사를 수행한다.

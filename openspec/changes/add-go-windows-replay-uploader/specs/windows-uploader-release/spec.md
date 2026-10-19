@@ -11,7 +11,7 @@ The repository SHALL build and version the Go client separately from Next.js usi
 
 ### Requirement: ARM Mac checks and Windows execution evidence are distinguished
 
-Portable logic SHALL be testable on ARM Mac using deterministic fixtures and mock HTTP. Windows-specific tests and release builds SHALL run on the GitHub-hosted `windows-2025` x64 runner. Cross-compilation success SHALL not be reported as Windows runtime success. The Windows job SHALL exercise Known Folder/discovery adapters, Unicode paths, file sharing/locks, loopback callbacks and DPAPI with isolated test data, and execute the built exe's bounded self-test mode.
+Portable logic MAY be tested locally on ARM Mac using deterministic fixtures and mock HTTP. Cloud CI SHALL use Windows runners only, running all Go tests with the race detector, vet and formatting checks. CGo SHALL be enabled for race tests only; distributed executables SHALL remain CGo-free. Windows-specific tests and release builds SHALL run on the GitHub-hosted `windows-2025` x64 runner. Cross-compilation success SHALL not be reported as Windows runtime success. The Windows job SHALL exercise Known Folder/discovery adapters, Unicode paths, file sharing/locks, loopback callbacks and DPAPI with isolated test data, and execute the built exe's bounded self-test mode.
 
 #### Scenario: Mac cross-build passes but Windows test fails
 
