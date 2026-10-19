@@ -1,0 +1,11 @@
+schema: spec-driven
+
+context: |
+  LLVY Uploader is a separate repository for a portable Go Windows x64 client.
+  Local replay preview, platform primitives and build/check workflows exist; authentication and upload are blocked on the server-owned contract.
+  Windows runtime, staging acceptance and releases remain unverified.
+  LLVY owns browser identity, desktop server APIs, data and the versioned desktop contract.
+  This client connects directly to LLVY and authorized Blob endpoints, not to Workers or QStash.
+  Do not require sibling repository checkouts for ordinary builds or tests.
+  Keep pending implementation and real Windows/provider verification tasks incomplete.
+  Use Korean for human-facing documentation. Historical plans are reference material only.

@@ -1,0 +1,53 @@
+name: Uploader checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  portable:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: "1.27.0"
+          cache-dependency-path: |
+            go.sum
+            tools/go.sum
+      - run: go mod verify
+      - run: go test -race ./...
+      - run: go vet ./...
+      - run: test -z "$(gofmt -l cmd internal scripts)"
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: "1.27.0"
+          cache-dependency-path: |
+            go.sum
+            tools/go.sum
+      - run: go mod verify
+      - run: go test -timeout 90s ./...
+      - run: go vet ./...
+      - run: ./scripts/build.ps1
+      - name: Inspect PE and bounded self-test
+        shell: pwsh
+        run: |
+          go run ./scripts/inspect ./dist/llvy-uploader.exe
+          if ($LASTEXITCODE -ne 0) { throw 'PE inspection failed' }
+          $process = Start-Process ./dist/llvy-uploader.exe -ArgumentList '--self-test' -PassThru
+          if (-not $process.WaitForExit(10000)) {
+            $process.Kill()
+            throw 'Self-test timed out'
+          }
+          if ($process.ExitCode -ne 0) { throw 'Self-test failed' }

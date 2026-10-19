@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/kgskr/llvy.git",
+  "commit": "f6c218f8d9b0476623b73dc75579722c8872d479",
+  "path": "contracts/desktop-v1",
+  "protocol": "desktop-v1",
+  "status": "candidate-live-blob-validation-pending",
+  "sha256": {
+    "protocol.json": "604d4074b96986fe2383a19a0fd473a97b7747517c78adc2a8edb2376df80d1c",
+    "schema.json": "7e5e3716f589c8de9328acbfe424417399097f0e1185541d1d9962e89a143739",
+    "fixtures.json": "0478287bd2cfcfd6b9a36f6f81e953afde589ffc5f2eeebce4ddf892d4ea27e5"
+  }
+}
