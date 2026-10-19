@@ -95,5 +95,5 @@
 
 - [x] 19.1 배포 workflow를 release.published 전용으로 변경하고 일반 CI의 배포 exe 빌드를 제거한다. Linux 성공 후 Windows 검사를 유지한다.
 - [x] 19.2 릴리스 버전을 검증하고 exe 파일명·내장 버전·PE 리소스·체크섬에 반영한다. 버전과 스크립트 회귀 검사를 추가한다.
-- [ ] 19.3 GHCR에 exe·체크섬·출처 OCI 패키지를 게시하고 digest 다운로드 재검증을 구성한다. 문서·위키·strict 검증과 일반 Linux→Windows CI를 확인한다.
+- [x] 19.3 GHCR에 exe·체크섬·출처 OCI 패키지를 게시하고 digest 다운로드 재검증을 구성한다. 문서·위키·strict 검증과 일반 Linux→Windows CI를 확인한다.
 - [ ] 19.4 실제 버전 릴리스 게시 후 Windows 배포 빌드·GHCR 게시·다운로드 검증 결과를 기록한다. 버전 릴리스가 발행되기 전에는 완료 처리하지 않는다.

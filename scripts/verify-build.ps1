@@ -9,10 +9,6 @@ try {
     if ($metadata.FileVersion -cne $Version -or $metadata.ProductVersion -cne $Version -or $metadata.OriginalFilename -cne $versionInfo.FileName) {
         throw 'Embedded Windows version does not match the release.'
     }
-    $buildInfo = go version -m $exePath
-    if ($LASTEXITCODE -ne 0 -or ($buildInfo -join "`n") -notmatch [regex]::Escape("-X main.version=$Version -X main.commit=")) {
-        throw 'Embedded application version does not match the release.'
-    }
     go run ./scripts/inspect $exePath
     if ($LASTEXITCODE -ne 0) { throw 'PE inspection failed' }
     $process = Start-Process $exePath -ArgumentList '--self-test' -PassThru

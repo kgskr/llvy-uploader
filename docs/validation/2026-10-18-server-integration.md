@@ -83,3 +83,5 @@ Go 전체 tests·race, macOS/Windows vet와 Windows amd64 GUI 교차 빌드를 �
 - actionlint v1.7.12, OpenSpec strict, Markdown/YAML 형식, 상대 링크·앵커, diff 공백 검사 통과.
 
 실제 버전 Release를 생성하지 않았으므로 변경된 릴리스 workflow의 Windows exe 실행·GHCR 게시·다운로드는 미수행이다. 실제 Windows 10/11 일반 사용자·Blob·Discord 검증도 남아 있다.
+
+`fd553d2`의 [일반 검사 실행](https://github.com/kgskr/llvy-uploader/actions/runs/39193587709)은 Linux 성공 후 Windows가 실행되어 모두 통과했다. 양쪽의 버전/리소스/스크립트 검사와 Go tests/race/vet가 성공했고 해당 push에서는 배포 workflow가 실행되지 않았다. 추가 로컬 점검에서 Go 1.27의 `go version -m` 출력에 linker 옵션이 없음을 확인해 그 출력으로 앱 버전을 판정하는 검사를 제거했다. 빌드 시 같은 버전을 linker와 PE 리소스에 주입하며 Windows 검증은 실제 PE FileVersion/ProductVersion/OriginalFilename을 대조한다.
