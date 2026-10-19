@@ -29,7 +29,7 @@
 
 저장소 루트에 `go.mod`, `go.sum`, `cmd/llvy-uploader`, `internal/{app,desktop,discovery,matching,replay,platform,ui}`를 두었다. Go 1.27.0과 Windows 바인딩 `golang.org/x/sys` v0.48.0을 고정한다. `desktop` 패키지가 고정된 서버 후보 계약에 따라 인증·API·큐를 구현한다. 서버는 TypeScript를 유지하며 이 저장소에 웹 빌드를 가져오지 않는다.
 
-제품 origin `https://llvy.my`에 로그인·순차 업로드를 연결하고 origin별 저장소와 잠금을 사용한다. 일반 `.rofl`과 hydrated Cloud Files, Windows dedup 파일을 허용하고 name-surrogate 및 알려지지 않은 특수 reparse 파일은 제외한다. 실제 LoL 설정 파일 fixture가 없어 설정 파서는 아직 추가하지 않는다. 고정 `go-winres` v0.3.3은 별도 `tools` 모듈에서 manifest·개발 버전 리소스를 생성한다. 아이콘·서명·보호된 릴리스 workflow는 후속 작업이다.
+빌드 시 지정한 HTTPS origin에 로그인·순차 업로드를 연결하고 origin별 저장소와 잠금을 사용한다. 일반 `.rofl`과 hydrated Cloud Files, Windows dedup 파일을 허용하고 name-surrogate 및 알려지지 않은 특수 reparse 파일은 제외한다. 실제 LoL 설정 파일 fixture가 없어 설정 파서는 아직 추가하지 않는다. 고정 `go-winres` v0.3.3은 별도 `tools` 모듈에서 manifest·개발 버전 리소스를 생성한다. 아이콘·서명·보호된 릴리스 workflow는 후속 작업이다.
 
 API·인증 규칙은 LLVY가 소유한다. [계약 정책](../../../contracts/desktop-v1/README.md)에 따라 원본 commit·체크섬을 기록한 계약 사본으로 Go 테스트를 실행한다. 형제 저장소 체크아웃 없이 빌드할 수 있어야 한다. 서버 변경이 필요한 릴리스는 관련 서버 검증 결과와 호환 배포를 확인하고 앱을 발행한다.
 
@@ -154,7 +154,7 @@ PR은 테스트와 비공개/일반 CI artifact까지만, 보호된 `uploader-v*
 
 ## 서버 연동 구현 (2026-10-18)
 
-초기 미리보기에 Go 인증·전송·결과 복구를 추가했다. 제품 origin은 `https://llvy.my`이며 제품 UI에는 URL 입력이 없다. `development` build tag만 별도 개발 origin을 허용한다. 계약은 LLVY의 후보 JSON 파일을 실제 원본 commit·SHA-256으로 고정하며 endpoint/헤더 정책을 embed한다. 초기 preview namespace 대신 제품 origin을 잠금과 자격 증명 namespace로 쓴다.
+초기 미리보기에 Go 인증·전송·결과 복구를 추가했다. 제품 origin은 기본값 없이 빌드 시 주입하며 제품 UI에는 URL 입력이 없다. `development` build tag만 명시적으로 지정한 loopback HTTP origin도 허용한다. 계약은 LLVY의 후보 JSON 파일을 실제 원본 commit·SHA-256으로 고정하며 endpoint/헤더 정책을 embed한다. 초기 preview namespace 대신 제품 origin을 잠금과 자격 증명 namespace로 쓴다.
 
 큐와 uploadId/nonce·멱등 키는 현재 프로세스의 메모리에 보관하며 종료 후 자동 재개하지 않는다. 재시도는 같은 entry를 유지하고 완료·중복 행의 더블 클릭은 서버가 검증한 game UUID 경로를 연다. 실제 Blob·Windows·Discord 검증과 릴리스는 남아 있으며 초기 미리보기 설명보다 이 구현 상태를 우선한다.
 
@@ -167,3 +167,9 @@ PR은 테스트와 비공개/일반 CI artifact까지만, 보호된 `uploader-v*
 ### 계약 사본의 체크아웃 바이트 보존
 
 고정 계약 JSON은 원본 SHA-256과 바이트 단위로 일치해야 한다. `.gitattributes`에서 `contracts/desktop-v1/*.json text eol=lf`를 지정해 Windows의 `core.autocrlf=true`에서도 LF를 유지한다. 체크섬 검사는 원본 바이트 그대로 수행하며 검사 시 줄바꿈을 정규화하지 않는다.
+
+### 빌드 주소와 다운로드 아티팩트
+
+GitHub Actions repository variable `LLVY_SERVER_ORIGIN`을 PowerShell 환경변수로 전달하고 Go linker의 `desktop.ServerOrigin`에 주입한다. 주소는 HTTPS origin만 허용하며 사용자 정보·경로·query·fragment·공백을 거부한다. 기본값과 실행 시 환경변수 fallback은 없다. 누락된 배포 빌드는 실패하고, CI의 명시적 `-AllowUnconfigured` 빌드는 self-test만 가능하며 배포하지 않는다. 개발 tag의 loopback HTTP도 기본값 없이 지정한다. 고정 서버 계약의 `productOrigin`은 해당 원본 revision의 배포 메타데이터로 보존하고 앱의 주소 기본값이나 허용 목록으로 사용하지 않는다. API·Blob endpoint/헤더 계약과 체크섬은 그대로 유지한다.
+
+수동 `Build Windows artifact` 워크플로는 주소 검증, Go tests/vet, exe 빌드·PE 검사·self-test를 통과한 뒤 exe·SHA-256·빌드/출처 정보를 Actions 아티팩트로 30일 보관한다. 환경변수 미설정 시 다운로드 산출물을 만들지 않는다. 일반 exe를 위한 Actions 저장소를 사용하며 GitHub Packages·정식 Release·서명 발행은 하지 않는다.

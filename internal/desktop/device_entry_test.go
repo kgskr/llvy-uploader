@@ -12,7 +12,7 @@ import (
 func TestEntriesCannotCrossDeviceSessions(t *testing.T) {
 	for _, known := range []bool{false, true} {
 		t.Run(map[bool]string{false: "lost reservation response", true: "known reservation"}[known], func(t *testing.T) {
-			c, _ := New(ProductOrigin, false, nil)
+			c, _ := New(testOrigin, false, nil)
 			c.credentials = credentials()
 			entry := NewEntry(fileFixture(t))
 			entry.ReservationAttempted = true
@@ -60,7 +60,7 @@ func TestEntriesCannotCrossDeviceSessions(t *testing.T) {
 }
 
 func TestSameDeviceRefreshPreservesEntry(t *testing.T) {
-	c, _ := New(ProductOrigin, false, nil)
+	c, _ := New(testOrigin, false, nil)
 	next := credentials()
 	c.credentials = next
 	c.credentials.AccessExpiresAt = time.Now().Add(-time.Minute)

@@ -63,3 +63,17 @@ The client SHALL consume a reviewed copy of LLVY-owned desktop-v1 schemas and fi
 
 - **WHEN** Git checks out the pinned contract JSON with `core.autocrlf=true`
 - **THEN** repository attributes preserve LF bytes and the original SHA-256 verification succeeds without normalizing or changing the pinned contract
+
+### Requirement: Download builds require an explicit server origin
+
+Production builds SHALL have no default server address and SHALL embed an explicitly validated HTTPS origin from `LLVY_SERVER_ORIGIN` at build time. They SHALL NOT accept runtime URL overrides or follow API redirects. The pinned contract snapshot metadata SHALL NOT act as a default origin. Missing or invalid configuration SHALL fail downloadable builds before artifact publication. A separate explicit CI-only unconfigured build MAY execute offline self-tests, but SHALL reject normal startup and SHALL NOT be published.
+
+#### Scenario: Build without a configured address
+
+- **WHEN** the download workflow has no `LLVY_SERVER_ORIGIN` repository variable
+- **THEN** it fails with a configuration error and publishes no exe
+
+#### Scenario: Download a configured development build
+
+- **WHEN** the manually triggered Windows artifact workflow passes origin validation, tests, vet, PE inspection and bounded self-test
+- **THEN** it stores the exe, SHA-256 and build provenance as a commit-identified Actions artifact for 30 days and labels it unsigned with external acceptance pending

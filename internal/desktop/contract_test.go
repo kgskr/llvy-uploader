@@ -45,7 +45,7 @@ func TestPinnedServerContract(t *testing.T) {
 	if err := json.Unmarshal(raw, &protocol); err != nil {
 		t.Fatal(err)
 	}
-	if protocol.ClientID != ClientID || protocol.ProductOrigin != ProductOrigin {
+	if protocol.ClientID != ClientID || ValidateOrigin(protocol.ProductOrigin, false) != nil {
 		t.Fatal("server identity mismatch")
 	}
 	raw, _ = os.ReadFile(filepath.Join(root, "fixtures.json"))

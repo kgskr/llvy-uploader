@@ -22,7 +22,7 @@ func response(value any) *http.Response {
 func TestProcessRefreshesBeforeClaimAndRejectsExpiringDevice(t *testing.T) {
 	for _, expiring := range []bool{false, true} {
 		t.Run(map[bool]string{false: "refresh", true: "absolute expiry"}[expiring], func(t *testing.T) {
-			c, _ := New(ProductOrigin, false, nil)
+			c, _ := New(testOrigin, false, nil)
 			next := credentials()
 			if expiring {
 				next.DeviceExpiresAt = time.Now().Add(time.Minute)
@@ -58,7 +58,7 @@ func TestProcessRefreshesBeforeClaimAndRejectsExpiringDevice(t *testing.T) {
 }
 
 func TestLostReservationRecoversAtZeroQuotaWithSameIdentity(t *testing.T) {
-	c, _ := New(ProductOrigin, false, nil)
+	c, _ := New(testOrigin, false, nil)
 	c.credentials = credentials()
 	e := NewEntry(fileFixture(t))
 	lost := true
@@ -124,7 +124,7 @@ func TestReselectionUpdatesOnlyUnattemptedFiles(t *testing.T) {
 	if err := os.WriteFile(file.Path, []byte("changed replay fixture with a different size"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	c, _ := New(ProductOrigin, false, nil)
+	c, _ := New(testOrigin, false, nil)
 	c.credentials = credentials()
 	if err := c.Upload(context.Background(), old, nil); !errors.Is(err, replay.ErrChanged) {
 		t.Fatal(err)
@@ -151,7 +151,7 @@ func TestReselectionUpdatesOnlyUnattemptedFiles(t *testing.T) {
 }
 
 func TestCanceledLogoutRemovesCredentials(t *testing.T) {
-	c, _ := New(ProductOrigin, false, nil)
+	c, _ := New(testOrigin, false, nil)
 	c.credentials = credentials()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

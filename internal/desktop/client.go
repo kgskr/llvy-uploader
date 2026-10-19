@@ -8,7 +8,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -30,15 +29,8 @@ type Client struct {
 }
 
 func New(origin string, development bool, vault Vault) (*Client, error) {
-	u, err := url.Parse(origin)
-	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" || u.Opaque != "" {
-		return nil, ErrContract
-	}
-	if origin != ProductOrigin && !development {
-		return nil, ErrContract
-	}
-	if u.Scheme != "https" && !(development && u.Scheme == "http" && (u.Hostname() == "127.0.0.1" || u.Hostname() == "localhost")) {
-		return nil, ErrContract
+	if err := ValidateOrigin(origin, development); err != nil {
+		return nil, err
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}

@@ -21,11 +21,14 @@ Windows 전용 테스트는 DPAPI, Known Folder와 읽기 핸들의 수정·삭�
 ## Windows PowerShell
 
 ```powershell
+$env:LLVY_SERVER_ORIGIN = "https://uploader.example.invalid" # 실제 서버의 HTTPS origin으로 지정
 ./scripts/build.ps1
 go run ./scripts/inspect ./dist/llvy-uploader.exe
 ./dist/llvy-uploader.exe --self-test
 ./dist/llvy-uploader.exe
 ```
+
+주소는 경로·query·fragment·사용자 정보를 포함하지 않은 HTTPS origin이어야 한다. 누락·잘못된 값은 빌드를 실패시킨다. `-AllowUnconfigured`는 CI의 주소 없는 self-test exe에만 사용하며 이 exe는 일반 실행을 거부한다.
 
 `build.ps1`은 amd64 GUI exe, SHA-256, Go 빌드 정보와 소스 provenance를 `dist/`에 만든다.
 manifest는 asInvoker, Per Monitor V2 DPI, 긴 경로와 Common Controls v6을 선언한다.
@@ -37,7 +40,7 @@ self-test는 임시 디렉토리에서 잠금·한글 설정·DPAPI를 검사하
 ```bash
 go -C tools tool go-winres make --in ../build/windows/winres.json --out ../cmd/llvy-uploader/rsrc --arch amd64
 mkdir -p dist
-GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags='-H windowsgui' -o dist/llvy-uploader.exe ./cmd/llvy-uploader
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags='-H windowsgui -X llvy-uploader/internal/desktop.ServerOrigin=https://uploader.example.invalid' -o dist/llvy-uploader.exe ./cmd/llvy-uploader
 go run ./scripts/inspect dist/llvy-uploader.exe
 ```
 
@@ -48,7 +51,7 @@ PE 검사는 명시적 import table의 DLL을 검사한다. Win32 어댑터가 �
 
 [검사 workflow](../.github/workflows/check.yml)는 고정 action SHA, Go 1.27.0, macOS와 `windows-2025`를 사용한다.
 push·pull request·수동 실행에서 Windows 테스트·vet·빌드·PE 검사·self-test를 실행한다. 최초 실행에서 발견한 계약 JSON의 CRLF 체크아웃 문제는 `.gitattributes`의 LF 고정으로 수정했다. 실행별 결과와 남은 범위는 [검증 기록](validation/2026-10-18-server-integration.md#2026-10-19-windows-ci-줄바꿈-수정)을 따른다.
-기본 read 권한과 일반 `pull_request`만 사용하며 비밀값을 요구하지 않는다. 현재 artifact 업로드·GitHub Release 발행은 하지 않는다.
+기본 read 권한과 일반 `pull_request`만 사용하며 비밀값을 요구하지 않는다. 일반 검사 workflow의 주소 없는 exe는 업로드하지 않는다. 별도 수동 workflow에서 설정된 개발 빌드만 Actions 아티팩트로 보관한다. 정식 GitHub Release는 발행하지 않는다.
 
 정식 릴리스에는 서버 원본 계약의 commit·체크섬과 호환 서버 검증, Windows 10/11 일반 사용자·한국어 IME·DPI·OneDrive·실제 LoL 경로, Discord·Blob·ROFL 통합 검증이 필요하다.
 그 후 보호된 `uploader-v*` workflow, 아이콘, 의존성 라이선스 묶음, artifact 보존과 서명 상태를 확정한다. 프로젝트 라이선스는 기존 LLVY에서 자동 상속하지 않는다.
@@ -64,10 +67,19 @@ push·pull request·수동 실행에서 Windows 테스트·vet·빌드·PE 검�
 
 `contracts/desktop-v1/source.json`의 원본 commit·SHA-256을 검사하고 사본 fixture를 Go DTO·전송 검증기에 대조한다. endpoint와 허용 헤더 값은 사본의 `protocol.json`을 embed한다. Blob API 버전이나 store ID를 클라이언트 요청 생성 코드에 넣지 않는다.
 
-일반 빌드는 `https://llvy.my`만 사용한다. 별도 로컬 개발 빌드는 다음처럼 만들며 제품 UI에서 주소를 변경하지 않는다.
+일반 빌드는 `LLVY_SERVER_ORIGIN`에서 주입한 HTTPS origin만 사용한다. 기본값과 실행 시 환경변수 fallback은 없다. 리다이렉트되는 별칭 대신 서버의 최종 origin을 설정해야 한다. 별도 로컬 개발 빌드는 다음처럼 명시적 loopback HTTP 주소로 만들며 제품 UI에서 주소를 변경하지 않는다.
 
 ```powershell
-go build -tags development -ldflags "-H windowsgui -X llvy-uploader/internal/desktop.DevelopmentOrigin=http://127.0.0.1:3000" -o dist/llvy-uploader-dev.exe ./cmd/llvy-uploader
+go build -tags development -ldflags "-H windowsgui -X llvy-uploader/internal/desktop.ServerOrigin=http://127.0.0.1:3000" -o dist/llvy-uploader-dev.exe ./cmd/llvy-uploader
 ```
 
 개발 origin은 제품과 다른 잠금·저장소를 쓴다. 서버는 자체 테스트 DB와 Blob/Discord 설정이 필요하다. 운영 환경 변수를 개발 fixture로 사용하지 않는다. 실제 Blob PUT 검증 전에는 후보 전송 헤더가 서비스에서 수락된다고 가정하지 않는다.
+
+## 다운로드 빌드
+
+1. GitHub 저장소 Settings → Secrets and variables → Actions → Variables에 `LLVY_SERVER_ORIGIN`을 등록한다. 값은 실제 서버의 HTTPS origin이며 비밀값이 아니다. exe와 빌드 기록에 포함된다.
+2. Actions → **Build Windows artifact** → **Run workflow**에서 빌드할 브랜치를 선택한다. 저장소 변수는 YAML의 기본값 없이 환경변수로 전달된다.
+3. Windows tests·vet·빌드·PE 검사·self-test·내장 주소 검사 성공 후 실행 페이지 Artifacts에서 `llvy-uploader-windows-x64-<commit SHA>`를 다운로드한다. exe, `SHA256SUMS.txt`, `build-info.txt`, `provenance.txt`가 포함된다. 보관 기간은 30일이다.
+4. 압축을 풀고 출처의 서버 주소와 SHA-256을 확인한 뒤 exe를 실행한다. 서버 주소를 바꾸면 다시 빌드해야 한다. 아티팩트는 미서명 개발 빌드이며 실제 서버 업로드 성공이나 Windows 10/11 일반 사용자 검증을 보장하지 않는다.
+
+주소 미설정·검증 실패·테스트 실패 시 아티팩트를 발행하지 않는다. 저장 위치는 [GitHub Actions 아티팩트](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts)이며 GitHub Packages 레지스트리나 정식 Release가 아니다.

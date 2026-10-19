@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+const testOrigin = "https://uploader.example.invalid"
+
 const fixtureID = "11111111-1111-4111-8111-111111111111"
 
 func credentials() Credentials {
@@ -39,7 +41,7 @@ func jsonResponse(w http.ResponseWriter, value any) {
 	_ = json.NewEncoder(w).Encode(value)
 }
 func TestOriginAndRedaction(t *testing.T) {
-	for _, u := range []string{"http://llvy.my", "https://evil.invalid", "https://llvy.my/", "https://u:p@llvy.my", "https://llvy.my?token=secret"} {
+	for _, u := range []string{"http://llvy.my", "https://llvy.my/", "https://u:p@llvy.my", "https://llvy.my?token=secret"} {
 		if _, err := New(u, false, nil); err == nil {
 			t.Errorf("allowed %s", u)
 		}

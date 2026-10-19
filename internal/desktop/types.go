@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-const ProductOrigin = "https://llvy.my"
 const ClientID = "llvy-windows-uploader"
 const Protocol = "desktop-v1"
 

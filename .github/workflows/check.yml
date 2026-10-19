@@ -39,15 +39,11 @@ jobs:
       - run: go mod verify
       - run: go test -timeout 90s ./...
       - run: go vet ./...
-      - run: ./scripts/build.ps1
-      - name: Inspect PE and bounded self-test
-        shell: pwsh
+      - run: ./scripts/build.ps1 -AllowUnconfigured
+      - run: ./scripts/verify-build.ps1
+      - name: Verify explicitly injected synthetic origin
+        env:
+          LLVY_SERVER_ORIGIN: https://uploader.example.invalid
         run: |
-          go run ./scripts/inspect ./dist/llvy-uploader.exe
-          if ($LASTEXITCODE -ne 0) { throw 'PE inspection failed' }
-          $process = Start-Process ./dist/llvy-uploader.exe -ArgumentList '--self-test' -PassThru
-          if (-not $process.WaitForExit(10000)) {
-            $process.Kill()
-            throw 'Self-test timed out'
-          }
-          if ($process.ExitCode -ne 0) { throw 'Self-test failed' }
+          ./scripts/build.ps1
+          ./scripts/verify-build.ps1

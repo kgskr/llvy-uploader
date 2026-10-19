@@ -75,6 +75,9 @@ func Run(version, commit string) error {
 		return err
 	}
 	origin, development := desktop.BuildOrigin()
+	if err := desktop.ValidateOrigin(origin, development); err != nil {
+		return err
+	}
 	store, err := platform.OpenStore(base, origin)
 	if err != nil {
 		return err

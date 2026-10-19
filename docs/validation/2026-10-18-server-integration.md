@@ -47,3 +47,9 @@ Go 전체 tests·race, macOS/Windows vet와 Windows amd64 GUI 교차 빌드를 �
 [최초 CI](https://github.com/kgskr/llvy-uploader/actions/runs/39184546181)에서 macOS 검사는 통과했으나 Windows는 `TestPinnedServerContract`의 체크섬 검사에 실패했다. Windows의 자동 CRLF 체크아웃 설정으로 계약 JSON 세 파일의 바이트가 바뀌는 현상을 별도 체크아웃에서 재현했다. `.gitattributes`로 해당 JSON의 LF를 고정한 뒤 같은 설정에서 원본 체크섬 세 개가 모두 일치했다. 계약 JSON·원본 revision·체크섬 및 검증 함수는 변경하지 않았다.
 
 수정 커밋 `706afa925555f81ea1d3997b8bd3f6b064baf84a`의 [CI 실행](https://github.com/kgskr/llvy-uploader/actions/runs/39185539718)에서 macOS tests/race/vet·형식 검사와 Windows 전체 테스트·vet·exe 빌드·PE 검사·bounded self-test가 모두 통과했다. Windows 작업은 1분 49초, macOS 작업은 32초였다. GitHub-hosted Windows Server runner의 자동 검증이며 실제 Windows 10/11 일반 사용자 PC 검증을 대신하지 않는다. 일반 사용자 PC·IME·DPI·실제 Blob·Discord 검증은 별도 완료 조건이다.
+
+## 빌드 origin과 다운로드 구성
+
+고정 제품 주소 기본값을 제거하고 `LLVY_SERVER_ORIGIN`으로 검증한 HTTPS origin을 linker에 전달한다. 누락·HTTP·경로·query·fragment·사용자 정보·범위 밖 port와 linker 구문을 섞은 입력을 거부하는 테스트를 추가했다. 기존 pinned JSON의 체크섬을 유지하며 원본의 `productOrigin` 메타데이터는 런타임 기본값으로 사용하지 않는다.
+
+일반 CI의 명시적 미설정 exe는 오프라인 self-test와 설정 오류 종료만 검사한다. 수동 다운로드 workflow는 설정된 exe의 테스트·검증 후 exe·체크섬·출처 정보를 30일 보관한다. 실제 서버 주소 설정과 해당 다운로드 workflow 실행 결과는 별도 확인 대상이다.

@@ -1,6 +1,6 @@
 # 업로더 사용 안내
 
-상태: Windows x64 개발 버전. 로그인·전송 코드는 구현했지만 실제 Windows·Blob·Discord 검증과 서버 배포는 남아 있다. 제품 서버 주소는 `https://llvy.my`이며 서버의 `DESKTOP_UPLOADER_ENABLED`가 켜져 있어야 연결할 수 있다.
+상태: Windows x64 개발 버전. 로그인·전송 코드는 구현했지만 실제 Windows·Blob·Discord 검증과 서버 배포는 남아 있다. 서버 주소는 빌드 시 고정되며 기본값은 없다. 다운로드 아티팩트의 `provenance.txt`에서 연결 대상을 확인한다. 서버의 `DESKTOP_UPLOADER_ENABLED`가 켜져 있어야 연결할 수 있다.
 
 1. [빌드 안내](development.md)에 따라 만든 exe를 실행한다. 설정은 `%LOCALAPPDATA%/LLVY/Uploader/` 아래 origin별 공간에 저장한다. exe가 달라도 같은 Windows 사용자/origin은 한 인스턴스만 실행한다.
 2. 저장한 경로, Windows 문서 폴더, 고정 드라이브의 알려진 설치 후보를 확인한다. 여러 후보가 있으면 `리플레이 폴더`에서 고른다. `폴더 선택`으로 복사한 폴더나 빈 폴더도 사용할 수 있다. 미검증 LoL 설정 파일은 읽지 않는다.

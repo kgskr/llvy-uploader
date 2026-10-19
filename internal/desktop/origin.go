@@ -2,4 +2,4 @@
 
 package desktop
 
-func BuildOrigin() (string, bool) { return ProductOrigin, false }
+func BuildOrigin() (string, bool) { return ServerOrigin, false }
