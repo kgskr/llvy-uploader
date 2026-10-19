@@ -42,12 +42,12 @@ go vet ./...
 go test -race ./...
 ```
 
-Windows PowerShell에서 `LLVY_SERVER_ORIGIN` 환경변수를 지정한 뒤 `./scripts/build.ps1`로 `dist/llvy-uploader.exe`를 만들 수 있다.
+Windows PowerShell에서 `LLVY_SERVER_ORIGIN` 환경변수를 지정한 뒤 `./scripts/build.ps1 -Version 1.2.3`으로 `dist/llvy-uploader-1.2.3-windows-x64.exe`를 만들 수 있다.
 빌드는 Go 1.27.0, `golang.org/x/sys` v0.48.0, 리소스 도구 `go-winres` v0.3.3을 고정하며 형제 저장소를 요구하지 않는다.
 원격 저장소는 [kgskr/llvy-uploader](https://github.com/kgskr/llvy-uploader)이며 로컬 모듈 경로는 `llvy-uploader`를 유지한다. 후보 API 계약 사본은 원본 commit·SHA-256으로 고정했다.
 문서의 형제 경로 링크는 세 코드 저장소와 위키를 같은 상위 디렉토리에 배치했을 때 동작한다.
 배포 라이선스는 별도로 결정한다.
 
-[다운로드 빌드 workflow](.github/workflows/build-windows.yml)는 수동 실행 후 검증된 exe·체크섬·출처 정보를 Actions 아티팩트에 30일 보관한다. 주소 변수가 없으면 빌드가 실패한다. 설정·실행·다운로드 순서는 [개발 안내](docs/development.md#다운로드-빌드)를 따른다.
+[다운로드 빌드 workflow](.github/workflows/build-windows.yml)는 버전 Release가 `published`될 때만 검증된 exe·체크섬·출처를 GitHub Packages(GHCR)에 게시한다. `v1.2.3` 또는 `uploader-v1.2.3`의 파일명은 `llvy-uploader-1.2.3-windows-x64.exe`이며 패키지 tag는 `1.2.3`이다. 주소 변수가 없으면 빌드가 실패한다. 설정·실행·다운로드 순서는 [개발 안내](docs/development.md#다운로드-빌드)를 따른다.
 
-클라우드 CI는 Linux에서 공통 테스트·race·vet·형식 검사를 먼저 실행하고 모두 성공하면 Windows 테스트·race·vet·exe 검사를 실행한다. macOS CI와 macOS 실행파일은 제공하지 않으며 Mac 공통 검사는 로컬 개발용이다.
+클라우드 CI는 Linux에서 공통 테스트·race·vet·형식 검사를 먼저 실행하고 모두 성공하면 Windows 테스트·race·vet를 실행한다. 배포 exe 빌드·PE 검사·self-test·패키지 게시는 릴리스 workflow에서만 실행한다. macOS CI와 macOS 실행파일은 제공하지 않으며 Mac 공통 검사는 로컬 개발용이다.

@@ -98,13 +98,13 @@ LLVY `desktop-replay-upload-api`의 URL/method/headers/expiresAt descriptor를 �
 ### 검증과 릴리스는 Windows 실행 증거를 포함한다
 
 - 로컬 Mac(선택): 순수 Go 패키지 `go test`, 지원 호스트의 race 검사, `go vet`, matcher/큐/HTTP contract fixture 테스트. `GOOS=windows GOARCH=amd64 CGO_ENABLED=0` 교차 빌드는 컴파일 확인으로만 기록한다.
-- Windows CI: 고정 `windows-2025` x64 runner, 고정 Go 버전과 action commit, `go test -race -timeout 120s ./...`(CGo/GCC), `go vet ./...`, gofmt, Windows 전용 discovery/DPAPI/loopback/파일 잠금 및 두 프로세스 단일 인스턴스 테스트, 실제 exe의 명시적 self-test 모드. self-test는 UI/자동 로그인/운영 업로드를 실행하지 않는다.
+- Windows CI: 고정 `windows-2025` x64 runner, 고정 Go 버전과 action commit, `go test -race -timeout 120s ./...`(CGo/GCC), `go vet ./...`, gofmt, Windows 전용 discovery/DPAPI/loopback/파일 잠금 및 두 프로세스 단일 인스턴스 테스트. 실제 exe 빌드와 명시적 self-test는 release.published workflow에서 수행한다. self-test는 UI/자동 로그인/운영 업로드를 실행하지 않는다.
 - 결과물: `-trimpath`, GUI subsystem, 버전/commit resource를 갖는 exe, SHA-256 checksum, 의존성/라이선스 목록과 빌드 provenance. exe 파일만으로 실행되는지 DLL import를 확인한다. UPX 압축은 사용하지 않는다. 바이너리는 Git에 커밋하지 않는다.
 - 통합: mock API의 실패/응답 유실/429/갱신 동시성, TypeScript 계약 fixture, 기존 웹 회귀 및 `npm run check`; 인증·예약 회수 경쟁은 disposable localhost PostgreSQL로 검증한다.
 - 스테이징: 실제 Discord 승인, Go→Blob 전송, 실제 ROFL 파싱/중복, 웹·앱 공유 한도, 기기 회수와 처리 경쟁을 검증한다. 실제 리플레이는 허용된 로컬/보호 fixture로 제공하고 공개 CI artifact에 올리지 않는다.
 - 실제 Windows 10/11 PC: 일반 사용자 권한, 한글 사용자 경로/IME, OneDrive 문서 위치 및 hydrated/pinned/online-only/오프라인 파일, LoL 기본/변경 경로, DPI, 네트워크 끊김과 포터블 실행. GitHub Windows Server runner의 관리자 실행 성공은 이 증거를 대체하지 않는다.
 
-PR은 테스트와 비공개/일반 CI artifact까지만, 보호된 `uploader-v*` 태그 워크플로가 검증된 commit의 exe를 GitHub Release로 낸다. PR/fork 작업에는 운영 자격 증명이나 서명 키를 노출하지 않는다. 코드 서명 인증서가 준비되지 않았으면 미서명 파일과 SmartScreen 확인 결과를 명시하며 경고 제거를 보장하지 않는다. 배포 승인은 구매/서명 인프라 도입과 구분한다.
+PR/push/수동 일반 검사는 테스트만 실행한다. 버전 Release의 published 이벤트에서만 Linux 검사를 통과한 동일 commit의 exe를 빌드해 GitHub Packages(GHCR)에 게시한다. 지원 태그는 `vX.Y.Z`와 `uploader-vX.Y.Z`이며 릴리스 게시 권한/태그 보호는 저장소에서 관리한다. PR/fork 작업에는 운영 자격 증명이나 서명 키를 노출하지 않는다. 코드 서명 인증서가 준비되지 않았으면 미서명 파일과 SmartScreen 확인 결과를 명시하며 경고 제거를 보장하지 않는다. 배포 승인은 구매/서명 인프라 도입과 구분한다.
 
 ## Risks / Trade-offs
 
@@ -172,10 +172,12 @@ PR은 테스트와 비공개/일반 CI artifact까지만, 보호된 `uploader-v*
 
 GitHub Actions repository variable `LLVY_SERVER_ORIGIN`을 PowerShell 환경변수로 전달하고 Go linker의 `desktop.ServerOrigin`에 주입한다. 주소는 HTTPS origin만 허용하며 사용자 정보·경로·query·fragment·공백을 거부한다. 기본값과 실행 시 환경변수 fallback은 없다. 누락된 배포 빌드는 실패하고, CI의 명시적 `-AllowUnconfigured` 빌드는 self-test만 가능하며 배포하지 않는다. 개발 tag의 loopback HTTP도 기본값 없이 지정한다. 고정 서버 계약의 `productOrigin`은 해당 원본 revision의 배포 메타데이터로 보존하고 앱의 주소 기본값이나 허용 목록으로 사용하지 않는다. API·Blob endpoint/헤더 계약과 체크섬은 그대로 유지한다.
 
-수동 `Build Windows artifact` 워크플로는 주소 검증, Go tests/vet, exe 빌드·PE 검사·self-test를 통과한 뒤 exe·SHA-256·빌드/출처 정보를 Actions 아티팩트로 30일 보관한다. 환경변수 미설정 시 다운로드 산출물을 만들지 않는다. 일반 exe를 위한 Actions 저장소를 사용하며 GitHub Packages·정식 Release·서명 발행은 하지 않는다.
+`Publish Windows package`는 `release.published`에서만 실행한다. `vX.Y.Z`와 `uploader-vX.Y.Z` 및 SemVer 사전 버전 접미사를 검증하고 해당 tag를 체크아웃한다. Windows 리소스 제약에 따라 각 숫자는 0–65535이며 build metadata(`+...`)는 받지 않는다. 정규화한 버전은 exe 파일명·앱/PE 버전·GHCR tag에 쓰고 commit은 provenance에 보존한다.
 
-클라우드 CI는 `ubuntu-24.04`에서 공통 tests/race·vet·gofmt를 먼저 수행한다. 검사 workflow와 다운로드 workflow의 Windows job은 `needs: linux`로 Linux 성공 뒤에만 시작하며 실패·취소 시 실행하지 않는다. Windows에서는 OS 전용 구현까지 전체 tests/race·vet와 exe 검증을 수행한다. macOS workflow job은 두지 않으며 로컬 Mac 검사는 개발 편의용이다. race 검사만 CGo를 활성화하고 배포 exe는 기존처럼 `CGO_ENABLED=0`으로 빌드한다.
+클라우드 CI는 `ubuntu-24.04`의 공통 tests/race·vet·gofmt·PowerShell 스크립트 검사를 먼저 통과해야 Windows tests/race·vet를 실행한다. push·PR·수동 검사에는 배포 exe 빌드가 없다. 릴리스 workflow만 CGo 없는 exe 빌드·PE 검사·self-test·내장 주소 검사를 실행한다. macOS job은 없으며 로컬 Mac 검사는 개발 편의용이다.
+
+검증한 exe·체크섬·빌드/출처 정보를 ORAS로 `ghcr.io/<repository>:<version>`에 OCI 파일 아티팩트로 게시한다. GitHub Packages에서 저장소 연결을 표시하도록 source annotation을 넣는다. `packages: write`는 릴리스 Windows job에만 부여하고 `GITHUB_TOKEN`은 게시 단계에만 전달한다. 게시한 digest를 다시 다운로드해 파일 체크섬을 대조한다. Actions의 임시 아티팩트 보관에는 의존하지 않으며 패키지 다운로드는 `oras pull`을 사용한다. 최초 패키지 공개 범위는 GitHub 기본 설정을 따르며 자동으로 계정 설정을 변경하지 않는다.
 
 ### Actions 실행 런타임
 
-2026-10-19 공식 안정 릴리스 기준 checkout v7.0.1, setup-go v7.0.0, upload-artifact v7.0.2의 검증된 commit SHA를 고정한다. 세 액션의 `action.yml`은 모두 Node.js 24를 사용한다. 업로드는 `archive: true`로 exe·체크섬·출처 묶음을 유지한다. 업로더 자체 Go 런타임과 독립적으로 관리하고 Node.js 20 강제 호환 실행에 의존하지 않는다.
+2026-10-19 공식 안정 릴리스 기준 checkout v7.0.1, setup-go v7.0.0의 검증된 commit SHA를 고정하며 모두 Node.js 24를 사용한다. ORAS는 공식 최신 안정 버전 v1.3.5를 Go로 설치한다. 별도 Node.js 20 기반 action을 추가하지 않는다. 실제 버전 릴리스 발행·GHCR 게시 실행과 Windows 일반 사용자·외부 서비스 수동 검증은 수행하기 전까지 미완료다.

@@ -2,7 +2,7 @@
 
 ### Requirement: Windows client has independent reproducible build inputs
 
-The repository SHALL build and version the Go client separately from Next.js using pinned Go/dependency/action versions, a committed module checksum file and an independent `uploader-vX.Y.Z` release tag. Production builds SHALL target `windows/amd64` with CGo disabled, GUI subsystem and embedded version/commit metadata. Client-only changes SHALL not require a web deployment; server or contract changes SHALL run affected checks in the owning repositories. Ordinary client builds SHALL NOT require a sibling LLVY checkout or Next.js toolchain.
+The repository SHALL build and version the Go client separately from Next.js using pinned Go/dependency/action versions, a committed module checksum file and an independent `vX.Y.Z` or `uploader-vX.Y.Z` release tag (optionally with a SemVer prerelease suffix). Production builds SHALL target `windows/amd64` with CGo disabled, GUI subsystem and embedded version/commit metadata. Client-only changes SHALL not require a web deployment; server or contract changes SHALL run affected checks in the owning repositories. Ordinary client builds SHALL NOT require a sibling LLVY checkout or Next.js toolchain.
 
 #### Scenario: Client-only pull request
 
@@ -11,7 +11,7 @@ The repository SHALL build and version the Go client separately from Next.js usi
 
 ### Requirement: ARM Mac checks and Windows execution evidence are distinguished
 
-Portable logic MAY be tested locally on ARM Mac using deterministic fixtures and mock HTTP. Cloud CI SHALL first run all Linux-compatible Go tests with the race detector, vet and formatting checks on `ubuntu-24.04`. In both check and download workflows, the Windows job SHALL depend on successful completion of the Linux job and SHALL be skipped if Linux fails or is canceled. Windows SHALL then run the full test suite with native adapters, race detection, vet and executable checks. CGo SHALL be enabled for race tests only; distributed executables SHALL remain CGo-free. Windows-specific tests and release builds SHALL run on the GitHub-hosted `windows-2025` x64 runner. Cross-compilation success SHALL not be reported as Windows runtime success. The Windows job SHALL exercise Known Folder/discovery adapters, Unicode paths, file sharing/locks, loopback callbacks and DPAPI with isolated test data, and execute the built exe's bounded self-test mode.
+Portable logic MAY be tested locally on ARM Mac using deterministic fixtures and mock HTTP. Cloud CI SHALL first run all Linux-compatible Go tests with the race detector, vet and formatting checks on `ubuntu-24.04`. In both check and download workflows, the Windows job SHALL depend on successful completion of the Linux job and SHALL be skipped if Linux fails or is canceled. Windows SHALL then run the full test suite with native adapters, race detection and vet. Distribution builds and executable checks SHALL run only in the release-published workflow; ordinary push/PR/manual checks SHALL NOT build a distribution exe. CGo SHALL be enabled for race tests only; distributed executables SHALL remain CGo-free. Windows-specific tests and release builds SHALL run on the GitHub-hosted `windows-2025` x64 runner. Cross-compilation success SHALL not be reported as Windows runtime success. The Windows job SHALL exercise Known Folder/discovery adapters, Unicode paths, file sharing/locks, loopback callbacks and DPAPI with isolated test data, and the release job SHALL execute the built exe's bounded self-test mode.
 
 #### Scenario: Mac cross-build passes but Windows test fails
 
@@ -29,7 +29,7 @@ The release workflow SHALL require Go tests/static checks, shared API fixture co
 
 ### Requirement: Releases distribute one exe with traceable verification
 
-A protected release workflow SHALL publish the verified exe, SHA-256 checksum, dependency/license information and source commit provenance through GitHub Releases. Application binaries SHALL not be committed to Git. The workflow SHALL inspect non-system DLL/runtime dependencies and SHALL not rely on Node.js/WebView2 or developer toolchains installed on the runner. Fork/PR jobs SHALL not receive production or signing credentials. Signing status SHALL be accurately disclosed and SmartScreen suppression SHALL not be guaranteed.
+A protected release workflow SHALL publish the verified exe, SHA-256 checksum, dependency/license information and source commit provenance through GitHub Packages (GHCR) as an OCI file artifact after a GitHub Release is published. The distribution workflow SHALL listen only to `release.published`, validate the release tag and build that tag. Executable filenames, embedded application/resource versions and package tags SHALL use the normalized release version, not the commit hash; provenance SHALL retain the full source commit. Package write permission SHALL be limited to the release build/publish job. It SHALL pull the published digest and verify the downloaded checksums before declaring publication successful. Dependency/license completeness and real-PC acceptance SHALL remain explicit pending gates for the current unsigned development build. Application binaries SHALL not be committed to Git. The workflow SHALL inspect non-system DLL/runtime dependencies and SHALL not rely on Node.js/WebView2 or developer toolchains installed on the runner. Fork/PR jobs SHALL not receive production or signing credentials. Signing status SHALL be accurately disclosed and SmartScreen suppression SHALL not be guaranteed.
 
 #### Scenario: Release artifact cannot run without a developer dependency
 
@@ -73,10 +73,20 @@ Production builds SHALL have no default server address and SHALL embed an explic
 - **WHEN** the download workflow has no `LLVY_SERVER_ORIGIN` repository variable
 - **THEN** it fails with a configuration error and publishes no exe
 
-#### Scenario: Download a configured development build
+#### Scenario: Publish a configured version
 
-- **WHEN** the manually triggered Windows artifact workflow passes origin validation, tests, vet, PE inspection and bounded self-test
-- **THEN** it stores the exe, SHA-256 and build provenance as a commit-identified Actions artifact for 30 days and labels it unsigned with external acceptance pending
+- **WHEN** a release such as `v1.2.3` is published and Linux then Windows checks, origin validation, PE inspection and bounded self-test pass
+- **THEN** the workflow publishes `llvy-uploader-1.2.3-windows-x64.exe`, SHA-256 and build provenance in the GHCR package tagged `1.2.3`, labeled unsigned with external acceptance pending
+
+#### Scenario: Push code or a tag without publishing a release
+
+- **WHEN** code or a version tag is pushed, a draft release is saved, or ordinary checks are manually dispatched
+- **THEN** no distribution exe build or package publication runs
+
+#### Scenario: Invalid release version
+
+- **WHEN** a published tag is not a supported version, exceeds Windows resource version limits, or contains unsafe path or shell characters
+- **THEN** the release workflow fails before building or publishing an executable
 
 #### Scenario: Linux common checks fail
 

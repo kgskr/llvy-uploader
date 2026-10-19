@@ -22,17 +22,16 @@ Windows 전용 테스트는 DPAPI, Known Folder와 읽기 핸들의 수정·삭�
 
 ```powershell
 $env:LLVY_SERVER_ORIGIN = "https://uploader.example.invalid" # 실제 서버의 HTTPS origin으로 지정
-./scripts/build.ps1
-go run ./scripts/inspect ./dist/llvy-uploader.exe
-./dist/llvy-uploader.exe --self-test
-./dist/llvy-uploader.exe
+./scripts/build.ps1 -Version 1.2.3
+./scripts/verify-build.ps1 -Version 1.2.3
+./dist/llvy-uploader-1.2.3-windows-x64.exe
 ```
 
 주소는 경로·query·fragment·사용자 정보를 포함하지 않은 HTTPS origin이어야 한다. 누락·잘못된 값은 빌드를 실패시킨다. `-AllowUnconfigured`는 CI의 주소 없는 self-test exe에만 사용하며 이 exe는 일반 실행을 거부한다.
 
 `build.ps1`은 amd64 GUI exe, SHA-256, Go 빌드 정보와 소스 provenance를 `dist/`에 만든다.
 manifest는 asInvoker, Per Monitor V2 DPI, 긴 경로와 Common Controls v6을 선언한다.
-현재 버전은 `0.0.0-dev`이며 아이콘·코드 서명은 추가하지 않았다. 생성 `.syso`는 빌드 후 제거하며 바이너리를 커밋하지 않는다.
+버전은 `-Version`으로 파일명·앱 버전·PE FileVersion/ProductVersion에 함께 주입한다. 생략 시 로컬 개발 버전 `0.0.0-dev`를 사용한다. 아이콘·코드 서명은 추가하지 않았다. 생성 `.syso`는 빌드 후 제거하며 바이너리를 커밋하지 않는다.
 self-test는 임시 디렉토리에서 잠금·한글 설정·DPAPI를 검사하고 최대 5초 뒤 종료한다. UI·로그인·업로드는 실행하지 않는다.
 
 ## macOS 교차 빌드
@@ -50,12 +49,12 @@ PE 검사는 명시적 import table의 DLL을 검사한다. Win32 어댑터가 �
 ## CI와 릴리스 경계
 
 [검사 workflow](../.github/workflows/check.yml)는 고정 action SHA, Go 1.27.0, `ubuntu-24.04`와 `windows-2025`를 순서대로 사용한다. Mac 검사는 로컬 개발 시 선택적으로 실행한다.
-2026-10-19에 확인한 공식 안정 버전 checkout v7.0.1·setup-go v7.0.0·upload-artifact v7.0.2를 commit SHA로 고정한다. 세 액션은 Node.js 24로 실행되며 앱 exe에 Node.js 의존성을 추가하지 않는다.
-push·pull request·수동 실행에서 Linux 공통 테스트·race·vet·gofmt를 먼저 실행한다. Linux job이 성공해야 `needs: linux`로 연결한 Windows 전체 테스트·race·vet·빌드·PE 검사·self-test를 시작하며 Linux 실패·취소 시 Windows는 건너뛴다. Go 소스는 `.gitattributes`로 LF 체크아웃을 고정해 Windows에서도 gofmt 결과를 비교한다. race 검사 단계에서만 `CGO_ENABLED=1`, `CC=gcc`를 지정하며 exe 빌드는 `CGO_ENABLED=0`을 유지한다. 최초 실행에서 발견한 계약 JSON의 CRLF 체크아웃 문제는 `.gitattributes`의 LF 고정으로 수정했다. 실행별 결과와 남은 범위는 [검증 기록](validation/2026-10-18-server-integration.md#2026-10-19-windows-ci-줄바꿈-수정)을 따른다.
-기본 read 권한과 일반 `pull_request`만 사용하며 비밀값을 요구하지 않는다. 일반 검사 workflow의 주소 없는 exe는 업로드하지 않는다. 별도 수동 workflow에서 설정된 개발 빌드만 Actions 아티팩트로 보관한다. 정식 GitHub Release는 발행하지 않는다.
+2026-10-19에 확인한 공식 안정 버전 checkout v7.0.1·setup-go v7.0.0를 commit SHA로 고정한다. 두 액션은 Node.js 24로 실행되며 앱 exe에 Node.js 의존성을 추가하지 않는다.
+push·pull request·수동 실행에서 Linux 공통 테스트·race·vet·gofmt를 먼저 실행한다. Linux job이 성공해야 `needs: linux`로 연결한 Windows 전체 테스트·race·vet를 시작하며 Linux 실패·취소 시 Windows는 건너뛴다. Go 소스는 `.gitattributes`로 LF 체크아웃을 고정해 Windows에서도 gofmt 결과를 비교한다. race 검사 단계에서만 `CGO_ENABLED=1`, `CC=gcc`를 지정하며 exe 빌드는 `CGO_ENABLED=0`을 유지한다. 최초 실행에서 발견한 계약 JSON의 CRLF 체크아웃 문제는 `.gitattributes`의 LF 고정으로 수정했다. 실행별 결과와 남은 범위는 [검증 기록](validation/2026-10-18-server-integration.md#2026-10-19-windows-ci-줄바꿈-수정)을 따른다.
+일반 검사는 read 권한과 `pull_request`를 사용하며 배포 exe를 만들지 않는다. 양쪽 OS에서 버전 파싱·파일명·리소스 생성·PowerShell 문법도 검사한다. 릴리스 workflow는 `release.published`에서만 Windows exe 빌드·PE 검사·self-test·내장 주소 검사를 거쳐 GHCR에 게시한다. 버전 Release 자체는 workflow가 생성하지 않는다.
 
 정식 릴리스에는 서버 원본 계약의 commit·체크섬과 호환 서버 검증, Windows 10/11 일반 사용자·한국어 IME·DPI·OneDrive·실제 LoL 경로, Discord·Blob·ROFL 통합 검증이 필요하다.
-그 후 보호된 `uploader-v*` workflow, 아이콘, 의존성 라이선스 묶음, artifact 보존과 서명 상태를 확정한다. 프로젝트 라이선스는 기존 LLVY에서 자동 상속하지 않는다.
+릴리스 게시 권한/태그 보호, 아이콘, 의존성 라이선스 묶음과 서명 상태는 별도로 확정한다. 프로젝트 라이선스는 기존 LLVY에서 자동 상속하지 않는다.
 
 ## 근거
 
@@ -78,9 +77,24 @@ go build -tags development -ldflags "-H windowsgui -X llvy-uploader/internal/des
 
 ## 다운로드 빌드
 
-1. GitHub 저장소 Settings → Secrets and variables → Actions → Variables에 `LLVY_SERVER_ORIGIN`을 등록한다. 값은 실제 서버의 HTTPS origin이며 비밀값이 아니다. exe와 빌드 기록에 포함된다.
-2. Actions → **Build Windows artifact** → **Run workflow**에서 빌드할 브랜치를 선택한다. 저장소 변수는 YAML의 기본값 없이 환경변수로 전달된다.
-3. Linux 공통 tests/race·vet·gofmt 성공 후 Windows tests·race·vet·빌드·PE 검사·self-test·내장 주소 검사까지 성공하면 실행 페이지 Artifacts에서 `llvy-uploader-windows-x64-<commit SHA>`를 다운로드한다. exe, `SHA256SUMS.txt`, `build-info.txt`, `provenance.txt`가 포함된다. 보관 기간은 30일이다.
-4. 압축을 풀고 출처의 서버 주소와 SHA-256을 확인한 뒤 exe를 실행한다. 서버 주소를 바꾸면 다시 빌드해야 한다. 아티팩트는 미서명 개발 빌드이며 실제 서버 업로드 성공이나 Windows 10/11 일반 사용자 검증을 보장하지 않는다.
+1. 저장소 Settings → Secrets and variables → Actions → Variables에 `LLVY_SERVER_ORIGIN`을 등록한다. 값은 실제 서버의 HTTPS origin이며 exe와 출처 정보에 포함된다.
+2. 빌드할 commit의 버전 태그로 GitHub Release를 **Publish release**한다. `v1.2.3` 또는 `uploader-v1.2.3`, `v1.2.3-rc.1`을 지원한다. draft 저장·tag/push·수동 일반 검사는 배포 빌드를 실행하지 않는다. 버전 숫자는 Windows 리소스 범위 0–65535이며 선행 0, `+build` 메타데이터와 경로/공백은 허용하지 않는다.
+3. **Publish Windows package**가 Linux 공통 검사 → Windows tests/race/vet → exe 빌드·PE·self-test·내장 주소 검사를 수행한다. `LLVY_SERVER_ORIGIN`이 없거나 검사가 실패하면 게시하지 않는다.
+4. 통과하면 GitHub Packages의 `ghcr.io/<owner>/llvy-uploader:1.2.3`에 OCI 파일 패키지를 저장한다. 파일은 `llvy-uploader-1.2.3-windows-x64.exe`, `SHA256SUMS.txt`, `build-info.txt`, `provenance.txt`다. 해시는 검증/출처 정보에 보존하고 파일명에는 버전을 쓴다.
+5. 게시 단계는 ORAS v1.3.5를 사용하며 `GITHUB_TOKEN`과 해당 job의 `packages: write`로 인증한다. 저장소 source annotation을 포함하고 게시한 digest를 다시 다운로드해 모든 파일의 SHA-256을 대조한다. 실행 요약에서 package reference와 검증된 digest를 확인한다.
 
-주소 미설정·검증 실패·테스트 실패 시 아티팩트를 발행하지 않는다. 저장 위치는 [GitHub Actions 아티팩트](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts)이며 GitHub Packages 레지스트리나 정식 Release가 아니다.
+[ORAS](https://oras.land/docs/installation/)를 설치한 뒤 다음처럼 내려받는다. `<owner>`는 해당 저장소 소유자로 바꾼다.
+
+```powershell
+oras pull ghcr.io/<owner>/llvy-uploader:1.2.3 --output ./download
+Get-FileHash ./download/llvy-uploader-1.2.3-windows-x64.exe -Algorithm SHA256
+Get-Content ./download/SHA256SUMS.txt
+Get-Content ./download/provenance.txt
+```
+
+최초 GHCR 패키지는 GitHub의 기본 공개 범위를 따른다. private 패키지 다운로드는 `read:packages` 권한으로 ORAS 로그인이 필요하며 공개 다운로드를 원하면 패키지 설정에서 visibility를 public으로 변경해야 한다. workflow는 계정/패키지 공개 범위를 바꾸지 않는다. Actions의 30일 임시 아티팩트나 Release 첨부 파일 대신 Packages에 저장하며 삭제 전까지 버전별로 관리한다. 같은 버전을 재게시하면 태그가 갱신될 수 있으므로 고정된 다운로드에는 실행 요약의 digest를 사용한다.
+
+현재 산출물은 미서명 개발 빌드다. 실제 버전 Release를 발행한 GHCR 게시 실행과 Windows 10/11 일반 사용자·실제 서버 업로드 검증은 별도로 확인한다. 서버 주소를 변경하려면 새 버전으로 다시 빌드한다.
+
+- [ORAS의 GHCR 파일 게시](https://oras.land/docs/1.2/how_to_guides/remote_registries/)
+- [GitHub Container registry 인증·저장소 연결·공개 범위](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)

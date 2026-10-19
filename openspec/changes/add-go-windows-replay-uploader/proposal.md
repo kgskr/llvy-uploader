@@ -8,7 +8,7 @@
 - 파일 탐색·경기 ID 매칭·선택·순차 업로드와 상태 복구를 구현한다.
 - LLVY 서버의 브라우저 승인·PKCE 계약을 소비하며 로컬 기기 자격 증명은 DPAPI로 보호한다.
 - LLVY 계약 원본의 고정 사본으로 검사하고 독립 Windows CI·릴리스를 구성한다.
-- 서버 주소의 기본값 없이 빌드 변수로 HTTPS origin을 주입하고 검증된 개발 exe를 Actions 아티팩트로 보관한다.
+- 서버 주소의 기본값 없이 빌드 변수로 HTTPS origin을 주입하고 게시된 버전 릴리스에서만 배포 exe를 만들고 버전 파일명·체크섬·출처를 GitHub Packages(GHCR)에 보관한다.
 
 ## Capabilities
 

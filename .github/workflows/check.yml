@@ -19,6 +19,9 @@ jobs:
           cache-dependency-path: |
             go.sum
             tools/go.sum
+      - name: Validate release versions and build scripts
+        shell: pwsh
+        run: ./scripts/test-build-scripts.ps1
       - run: go mod verify
       - name: Test common code with Linux race detector
         env:
@@ -47,6 +50,9 @@ jobs:
           cache-dependency-path: |
             go.sum
             tools/go.sum
+      - name: Validate release versions and build scripts
+        shell: pwsh
+        run: ./scripts/test-build-scripts.ps1
       - run: go mod verify
       - name: Test with Windows race detector
         env:
@@ -54,11 +60,3 @@ jobs:
           CC: gcc
         run: go test -race -timeout 120s ./...
       - run: go vet ./...
-      - run: ./scripts/build.ps1 -AllowUnconfigured
-      - run: ./scripts/verify-build.ps1
-      - name: Verify explicitly injected synthetic origin
-        env:
-          LLVY_SERVER_ORIGIN: https://uploader.example.invalid
-        run: |
-          ./scripts/build.ps1
-          ./scripts/verify-build.ps1

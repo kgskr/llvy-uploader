@@ -1,22 +1,45 @@
-name: Build Windows artifact
+name: Publish Windows package
 on:
-  workflow_dispatch:
+  release:
+    types: [published]
 permissions:
   contents: read
+concurrency:
+  group: publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
 jobs:
   linux:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      commit: ${{ steps.release.outputs.commit }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ github.event.release.tag_name }}
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.27.0"
           cache-dependency-path: |
             go.sum
             tools/go.sum
+      - name: Read published release version
+        id: release
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          . ./scripts/version.ps1
+          $info = Get-UploaderReleaseVersion -Tag $env:RELEASE_TAG
+          "version=$($info.Version)" >> $env:GITHUB_OUTPUT
+          $commit = git rev-parse --verify HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot read source commit' }
+          "commit=$commit" >> $env:GITHUB_OUTPUT
+      - name: Validate release versions and build scripts
+        shell: pwsh
+        run: ./scripts/test-build-scripts.ps1
       - run: go mod verify
       - name: Test common code with Linux race detector
         env:
@@ -34,13 +57,17 @@ jobs:
   build:
     needs: linux
     runs-on: windows-2025
-    timeout-minutes: 15
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
     env:
       LLVY_SERVER_ORIGIN: ${{ vars.LLVY_SERVER_ORIGIN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ needs.linux.outputs.commit }}
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.27.0"
@@ -49,6 +76,9 @@ jobs:
             tools/go.sum
       - name: Require configured HTTPS server origin
         run: go run ./scripts/validate-origin
+      - name: Validate release versions and build scripts
+        shell: pwsh
+        run: ./scripts/test-build-scripts.ps1
       - run: go mod verify
       - name: Test with Windows race detector
         env:
@@ -56,17 +86,17 @@ jobs:
           CC: gcc
         run: go test -race -timeout 120s ./...
       - run: go vet ./...
-      - run: ./scripts/build.ps1
-      - run: ./scripts/verify-build.ps1
-      - name: Store unsigned Windows build
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: llvy-uploader-windows-x64-${{ github.sha }}
-          path: |
-            dist/llvy-uploader.exe
-            dist/SHA256SUMS.txt
-            dist/build-info.txt
-            dist/provenance.txt
-          if-no-files-found: error
-          retention-days: 30
-          archive: true
+      - name: Build and verify versioned Windows executable
+        env:
+          RELEASE_VERSION: ${{ needs.linux.outputs.version }}
+        run: |
+          ./scripts/build.ps1 -Version $env:RELEASE_VERSION
+          ./scripts/verify-build.ps1 -Version $env:RELEASE_VERSION
+      - name: Install ORAS
+        run: go install oras.land/oras/cmd/oras@v1.3.5
+      - name: Publish and verify GitHub Packages download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.linux.outputs.version }}
+          SOURCE_COMMIT: ${{ needs.linux.outputs.commit }}
+        run: ./scripts/publish-package.ps1 -Version $env:RELEASE_VERSION -Repository $env:GITHUB_REPOSITORY -Commit $env:SOURCE_COMMIT

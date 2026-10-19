@@ -69,3 +69,17 @@ Go 전체 tests·race, macOS/Windows vet와 Windows amd64 GUI 교차 빌드를 �
 `3b11dc997bdbe248c752d07155545a56f22fc62a`에서 checkout v7.0.1, setup-go v7.0.0, upload-artifact v7.0.2를 공식 태그의 commit SHA로 고정했다. 각 원본 `action.yml`의 Node.js 24 선언과 입력 호환성을 확인했으며 ZIP 묶음은 `archive: true`로 명시했다. [일반 CI](https://github.com/kgskr/llvy-uploader/actions/runs/39192265465)와 [다운로드 빌드](https://github.com/kgskr/llvy-uploader/actions/runs/39192280967)가 모두 통과했고 네 job의 annotation은 모두 0건이었다. Node.js 20 경고를 억제하는 환경변수는 사용하지 않았다.
 
 [생성 아티팩트](https://github.com/kgskr/llvy-uploader/actions/runs/39192280967/artifacts/12160199158)를 내려받아 exe·체크섬·빌드 정보·출처 네 파일, SHA-256 일치, 소스 commit, `https://www.llvy.my` origin 출처와 CGo 없는 빌드를 확인했다. 실제 Discord·Blob 업로드와 일반 사용자 PC 검증은 별도다.
+
+## 2026-10-19 릴리스 버전과 GitHub Packages 구성
+
+배포 workflow를 `release.published` 전용으로 바꾸고 일반 push/PR/수동 CI의 배포 exe 빌드를 제거했다. Linux 검사 후 Windows는 Linux에서 확인한 동일 commit을 체크아웃한다. `v1.2.3`/`uploader-v1.2.3`과 사전 버전을 검증해 exe 파일명·Go linker 버전·PE 리소스·체크섬에 반영한다. GHCR 게시 단계는 ORAS v1.3.5와 job 범위 `packages: write`로 파일 묶음을 게시하고 digest 다운로드 후 네 파일의 체크섬을 대조한다.
+
+로컬 검증:
+
+- Go `test -race -timeout 120s ./...`, `vet ./...`, `mod verify` 통과.
+- PowerShell 7.6.7에서 유효/잘못된 버전, 경로·명령 주입 문자열, Windows 버전 숫자 범위, 리소스 값 및 모든 PowerShell 문법 검사 통과.
+- 합성 origin으로 `build.ps1 -Version 1.2.3-rc.1`을 실행해 버전 파일명 Windows exe 생성·PE 검사 통과. Mac에서 교차 빌드한 결과이며 Windows 실행 성공으로 간주하지 않는다.
+- ORAS v1.3.5의 실제 OCI layout 저장·추출로 exe·체크섬·빌드 정보·provenance 네 파일의 SHA-256 일치를 확인했다. 로컬 저장소 검사이며 GHCR 네트워크 게시 증거는 아니다.
+- actionlint v1.7.12, OpenSpec strict, Markdown/YAML 형식, 상대 링크·앵커, diff 공백 검사 통과.
+
+실제 버전 Release를 생성하지 않았으므로 변경된 릴리스 workflow의 Windows exe 실행·GHCR 게시·다운로드는 미수행이다. 실제 Windows 10/11 일반 사용자·Blob·Discord 검증도 남아 있다.
