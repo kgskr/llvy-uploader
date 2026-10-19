@@ -50,4 +50,4 @@ Windows PowerShell에서 `LLVY_SERVER_ORIGIN` 환경변수를 지정한 뒤 `./s
 
 [다운로드 빌드 workflow](.github/workflows/build-windows.yml)는 수동 실행 후 검증된 exe·체크섬·출처 정보를 Actions 아티팩트에 30일 보관한다. 주소 변수가 없으면 빌드가 실패한다. 설정·실행·다운로드 순서는 [개발 안내](docs/development.md#다운로드-빌드)를 따른다.
 
-클라우드 CI는 Windows runner에서 전체 테스트·race·vet·형식·exe 검사를 실행한다. macOS CI와 macOS 실행파일은 제공하지 않으며 Mac 공통 검사는 로컬 개발용이다.
+클라우드 CI는 Linux에서 공통 테스트·race·vet·형식 검사를 먼저 실행하고 모두 성공하면 Windows 테스트·race·vet·exe 검사를 실행한다. macOS CI와 macOS 실행파일은 제공하지 않으며 Mac 공통 검사는 로컬 개발용이다.

@@ -11,7 +11,7 @@ The repository SHALL build and version the Go client separately from Next.js usi
 
 ### Requirement: ARM Mac checks and Windows execution evidence are distinguished
 
-Portable logic MAY be tested locally on ARM Mac using deterministic fixtures and mock HTTP. Cloud CI SHALL use Windows runners only, running all Go tests with the race detector, vet and formatting checks. CGo SHALL be enabled for race tests only; distributed executables SHALL remain CGo-free. Windows-specific tests and release builds SHALL run on the GitHub-hosted `windows-2025` x64 runner. Cross-compilation success SHALL not be reported as Windows runtime success. The Windows job SHALL exercise Known Folder/discovery adapters, Unicode paths, file sharing/locks, loopback callbacks and DPAPI with isolated test data, and execute the built exe's bounded self-test mode.
+Portable logic MAY be tested locally on ARM Mac using deterministic fixtures and mock HTTP. Cloud CI SHALL first run all Linux-compatible Go tests with the race detector, vet and formatting checks on `ubuntu-24.04`. In both check and download workflows, the Windows job SHALL depend on successful completion of the Linux job and SHALL be skipped if Linux fails or is canceled. Windows SHALL then run the full test suite with native adapters, race detection, vet and executable checks. CGo SHALL be enabled for race tests only; distributed executables SHALL remain CGo-free. Windows-specific tests and release builds SHALL run on the GitHub-hosted `windows-2025` x64 runner. Cross-compilation success SHALL not be reported as Windows runtime success. The Windows job SHALL exercise Known Folder/discovery adapters, Unicode paths, file sharing/locks, loopback callbacks and DPAPI with isolated test data, and execute the built exe's bounded self-test mode.
 
 #### Scenario: Mac cross-build passes but Windows test fails
 
@@ -77,3 +77,8 @@ Production builds SHALL have no default server address and SHALL embed an explic
 
 - **WHEN** the manually triggered Windows artifact workflow passes origin validation, tests, vet, PE inspection and bounded self-test
 - **THEN** it stores the exe, SHA-256 and build provenance as a commit-identified Actions artifact for 30 days and labels it unsigned with external acceptance pending
+
+#### Scenario: Linux common checks fail
+
+- **WHEN** the Linux test, race, vet or formatting gate fails or is canceled
+- **THEN** the dependent Windows test/build job does not run and no downloadable artifact is published
