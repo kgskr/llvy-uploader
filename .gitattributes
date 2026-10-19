@@ -1,2 +1,5 @@
 # Keep pinned server contract bytes identical on every platform.
 contracts/desktop-v1/*.json text eol=lf
+
+# gofmt output uses LF, including Windows CI.
+*.go text eol=lf
