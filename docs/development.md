@@ -50,6 +50,7 @@ PE 검사는 명시적 import table의 DLL을 검사한다. Win32 어댑터가 �
 ## CI와 릴리스 경계
 
 [검사 workflow](../.github/workflows/check.yml)는 고정 action SHA, Go 1.27.0, `ubuntu-24.04`와 `windows-2025`를 순서대로 사용한다. Mac 검사는 로컬 개발 시 선택적으로 실행한다.
+2026-10-19에 확인한 공식 안정 버전 checkout v7.0.1·setup-go v7.0.0·upload-artifact v7.0.2를 commit SHA로 고정한다. 세 액션은 Node.js 24로 실행되며 앱 exe에 Node.js 의존성을 추가하지 않는다.
 push·pull request·수동 실행에서 Linux 공통 테스트·race·vet·gofmt를 먼저 실행한다. Linux job이 성공해야 `needs: linux`로 연결한 Windows 전체 테스트·race·vet·빌드·PE 검사·self-test를 시작하며 Linux 실패·취소 시 Windows는 건너뛴다. Go 소스는 `.gitattributes`로 LF 체크아웃을 고정해 Windows에서도 gofmt 결과를 비교한다. race 검사 단계에서만 `CGO_ENABLED=1`, `CC=gcc`를 지정하며 exe 빌드는 `CGO_ENABLED=0`을 유지한다. 최초 실행에서 발견한 계약 JSON의 CRLF 체크아웃 문제는 `.gitattributes`의 LF 고정으로 수정했다. 실행별 결과와 남은 범위는 [검증 기록](validation/2026-10-18-server-integration.md#2026-10-19-windows-ci-줄바꿈-수정)을 따른다.
 기본 read 권한과 일반 `pull_request`만 사용하며 비밀값을 요구하지 않는다. 일반 검사 workflow의 주소 없는 exe는 업로드하지 않는다. 별도 수동 workflow에서 설정된 개발 빌드만 Actions 아티팩트로 보관한다. 정식 GitHub Release는 발행하지 않는다.
 

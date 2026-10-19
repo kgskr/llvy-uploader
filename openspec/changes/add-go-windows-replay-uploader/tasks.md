@@ -86,3 +86,7 @@
 ## 17. Linux 선행 검사와 Windows 후속 검사
 
 - [x] 17.1 검사·다운로드 workflow에 Linux 공통 tests/race·vet·형식 검사를 추가하고 Windows job을 Linux 성공에 종속시킨다. 실제 순차 CI와 문서/strict 검증을 확인한다.
+
+## 18. Actions 최신 안정 버전 갱신
+
+- [ ] 18.1 모든 workflow 액션을 공식 최신 안정 버전의 commit SHA로 갱신하고 Linux→Windows CI·다운로드 빌드·아티팩트 및 Node.js 20 경고 제거를 확인한다.

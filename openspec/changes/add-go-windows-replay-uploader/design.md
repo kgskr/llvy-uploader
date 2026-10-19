@@ -175,3 +175,7 @@ GitHub Actions repository variable `LLVY_SERVER_ORIGIN`을 PowerShell 환경변�
 수동 `Build Windows artifact` 워크플로는 주소 검증, Go tests/vet, exe 빌드·PE 검사·self-test를 통과한 뒤 exe·SHA-256·빌드/출처 정보를 Actions 아티팩트로 30일 보관한다. 환경변수 미설정 시 다운로드 산출물을 만들지 않는다. 일반 exe를 위한 Actions 저장소를 사용하며 GitHub Packages·정식 Release·서명 발행은 하지 않는다.
 
 클라우드 CI는 `ubuntu-24.04`에서 공통 tests/race·vet·gofmt를 먼저 수행한다. 검사 workflow와 다운로드 workflow의 Windows job은 `needs: linux`로 Linux 성공 뒤에만 시작하며 실패·취소 시 실행하지 않는다. Windows에서는 OS 전용 구현까지 전체 tests/race·vet와 exe 검증을 수행한다. macOS workflow job은 두지 않으며 로컬 Mac 검사는 개발 편의용이다. race 검사만 CGo를 활성화하고 배포 exe는 기존처럼 `CGO_ENABLED=0`으로 빌드한다.
+
+### Actions 실행 런타임
+
+2026-10-19 공식 안정 릴리스 기준 checkout v7.0.1, setup-go v7.0.0, upload-artifact v7.0.2의 검증된 commit SHA를 고정한다. 세 액션의 `action.yml`은 모두 Node.js 24를 사용한다. 업로드는 `archive: true`로 exe·체크섬·출처 묶음을 유지한다. 업로더 자체 Go 런타임과 독립적으로 관리하고 Node.js 20 강제 호환 실행에 의존하지 않는다.
