@@ -89,4 +89,4 @@
 
 ## 18. Actions 최신 안정 버전 갱신
 
-- [ ] 18.1 모든 workflow 액션을 공식 최신 안정 버전의 commit SHA로 갱신하고 Linux→Windows CI·다운로드 빌드·아티팩트 및 Node.js 20 경고 제거를 확인한다.
+- [x] 18.1 모든 workflow 액션을 공식 최신 안정 버전의 commit SHA로 갱신하고 Linux→Windows CI·다운로드 빌드·아티팩트 및 Node.js 20 경고 제거를 확인한다.

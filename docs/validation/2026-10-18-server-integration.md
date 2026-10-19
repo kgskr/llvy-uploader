@@ -63,3 +63,9 @@ Go 전체 tests·race, macOS/Windows vet와 Windows amd64 GUI 교차 빌드를 �
 ## Linux 선행 검사와 Windows 후속 검사
 
 `e4a98af837084902154a798ec373e735c8c4fb24`의 [순차 CI](https://github.com/kgskr/llvy-uploader/actions/runs/39189155781)에서 Linux 공통 tests/race·vet·gofmt가 56초에 통과한 뒤 Windows job이 시작되었고 tests/race·vet·exe·self-test·주소 주입 검사가 1분 36초에 통과했다. 두 workflow의 Windows job은 `needs: linux`에 종속되어 Linux 실패·취소 시 실행되지 않는다. 다운로드 workflow의 동일한 종속성은 구성 검사로 확인했으며 실제 아티팩트 발행은 서버 주소 설정 후 별도 실행 대상이다. 이전 Windows-only CI 기록은 당시 구성의 근거로 보존한다.
+
+## Actions Node.js 24 안정 버전 검증
+
+`3b11dc997bdbe248c752d07155545a56f22fc62a`에서 checkout v7.0.1, setup-go v7.0.0, upload-artifact v7.0.2를 공식 태그의 commit SHA로 고정했다. 각 원본 `action.yml`의 Node.js 24 선언과 입력 호환성을 확인했으며 ZIP 묶음은 `archive: true`로 명시했다. [일반 CI](https://github.com/kgskr/llvy-uploader/actions/runs/39192265465)와 [다운로드 빌드](https://github.com/kgskr/llvy-uploader/actions/runs/39192280967)가 모두 통과했고 네 job의 annotation은 모두 0건이었다. Node.js 20 경고를 억제하는 환경변수는 사용하지 않았다.
+
+[생성 아티팩트](https://github.com/kgskr/llvy-uploader/actions/runs/39192280967/artifacts/12160199158)를 내려받아 exe·체크섬·빌드 정보·출처 네 파일, SHA-256 일치, 소스 commit, `https://www.llvy.my` origin 출처와 CGo 없는 빌드를 확인했다. 실제 Discord·Blob 업로드와 일반 사용자 PC 검증은 별도다.
