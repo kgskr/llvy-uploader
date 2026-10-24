@@ -112,7 +112,7 @@ LLVY `desktop-replay-upload-api`의 URL/method/headers/expiresAt descriptor를 �
 - 스테이징: 실제 Discord 승인, Go→Blob 전송, 실제 ROFL 파싱/중복, 웹·앱 공유 한도, 기기 회수와 처리 경쟁을 검증한다. 실제 리플레이는 허용된 로컬/보호 fixture로 제공하고 공개 CI artifact에 올리지 않는다.
 - 실제 Windows 10/11 PC: 일반 사용자 권한, 한글 사용자 경로/IME, OneDrive 문서 위치 및 hydrated/pinned/online-only/오프라인 파일, LoL 기본/변경 경로, DPI, 네트워크 끊김과 포터블 실행. GitHub Windows Server runner의 관리자 실행 성공은 이 증거를 대체하지 않는다.
 
-PR/push/수동 일반 검사는 테스트만 실행한다. 버전 Release의 published 이벤트에서만 Linux 검사를 통과한 동일 commit의 exe를 빌드해 GitHub Packages(GHCR)에 게시한다. 지원 태그는 `vX.Y.Z`와 `uploader-vX.Y.Z`이며 릴리스 게시 권한/태그 보호는 저장소에서 관리한다. PR/fork 작업에는 운영 자격 증명이나 서명 키를 노출하지 않는다. 코드 서명 인증서가 준비되지 않았으면 미서명 파일과 SmartScreen 확인 결과를 명시하며 경고 제거를 보장하지 않는다. 배포 승인은 구매/서명 인프라 도입과 구분한다.
+PR/push/수동 일반 검사는 테스트만 실행한다. 버전 Release의 published 이벤트에서만 Linux 검사를 통과한 동일 commit의 exe를 빌드해 GitHub Release 첨부 파일로 게시한다. 지원 태그는 `vX.Y.Z`와 `uploader-vX.Y.Z`이며 릴리스 게시 권한/태그 보호는 저장소에서 관리한다. PR/fork 작업에는 운영 자격 증명이나 서명 키를 노출하지 않는다. 코드 서명 인증서가 준비되지 않았으면 미서명 파일과 SmartScreen 확인 결과를 명시하며 경고 제거를 보장하지 않는다. 배포 승인은 구매/서명 인프라 도입과 구분한다.
 
 ## Risks / Trade-offs
 
@@ -186,11 +186,11 @@ PR/push/수동 일반 검사는 테스트만 실행한다. 버전 Release의 pub
 
 GitHub Actions repository variable `LLVY_SERVER_ORIGIN`을 PowerShell 환경변수로 전달하고 Go linker의 `desktop.ServerOrigin`에 주입한다. 주소는 HTTPS origin만 허용하며 사용자 정보·경로·query·fragment·공백을 거부한다. 기본값과 실행 시 환경변수 fallback은 없다. 누락된 배포 빌드는 실패하고, CI의 명시적 `-AllowUnconfigured` 빌드는 self-test만 가능하며 배포하지 않는다. 개발 tag의 loopback HTTP도 기본값 없이 지정한다. 고정 서버 계약의 `productOrigin`은 해당 원본 revision의 배포 메타데이터로 보존하고 앱의 주소 기본값이나 허용 목록으로 사용하지 않는다. API·Blob endpoint/헤더 계약과 체크섬은 그대로 유지한다.
 
-`Publish Windows package`는 `release.published`에서만 실행한다. `vX.Y.Z`와 `uploader-vX.Y.Z` 및 SemVer 사전 버전 접미사를 검증하고 해당 tag를 체크아웃한다. Windows 리소스 제약에 따라 각 숫자는 0–65535이며 build metadata(`+...`)는 받지 않는다. 정규화한 버전은 exe 파일명·앱/PE 버전·GHCR tag에 쓰고 commit은 provenance에 보존한다.
+`Publish Windows executable`는 `release.published`에서만 실행한다. `vX.Y.Z`와 `uploader-vX.Y.Z` 및 SemVer 사전 버전 접미사를 검증하고 해당 tag를 체크아웃한다. Windows 리소스 제약에 따라 각 숫자는 0–65535이며 build metadata(`+...`)는 받지 않는다. 정규화한 버전은 exe 파일명·앱/PE 버전에 쓰고 commit은 provenance에 보존한다.
 
 클라우드 CI는 `ubuntu-24.04`의 공통 tests/race·vet·gofmt·PowerShell 스크립트 검사를 먼저 통과해야 Windows tests/race·vet를 실행한다. push·PR·수동 검사에는 배포 exe 빌드가 없다. 릴리스 workflow만 CGo 없는 exe 빌드·PE 검사·self-test·내장 주소 검사를 실행한다. macOS job은 없으며 로컬 Mac 검사는 개발 편의용이다.
 
-검증한 exe·체크섬·빌드/출처 정보를 ORAS로 `ghcr.io/<repository>:<version>`에 OCI 파일 아티팩트로 게시한다. GitHub Packages에서 저장소 연결을 표시하도록 source annotation을 넣는다. `packages: write`는 릴리스 Windows job에만 부여하고 `GITHUB_TOKEN`은 게시 단계에만 전달한다. 게시한 digest를 다시 다운로드해 파일 체크섬을 대조한다. Actions의 임시 아티팩트 보관에는 의존하지 않으며 패키지 다운로드는 `oras pull`을 사용한다. 최초 패키지 공개 범위는 GitHub 기본 설정을 따르며 자동으로 계정 설정을 변경하지 않는다.
+검증한 exe·체크섬·빌드/출처·의존성 고지·검증 근거를 GitHub CLI로 해당 Release에 직접 첨부한다. 배포 job에만 `contents: write`를 부여하고 토큰은 게시 단계에서만 전달한다. 태그 버전, 실제 Git tag commit, Release 채널을 검증한 후 업로드한다. 기존 자산은 덮어쓰지 않으며 재실행 시 같은 바이트만 재사용하고 다른 바이트가 있으면 실패한다. 첨부 파일을 다시 내려받아 모든 SHA-256을 비교한다. 사용자는 브라우저에서 exe를 바로 받으며 Docker·ORAS를 설치하지 않는다. GHCR 게시와 packages 쓰기 권한은 제거한다.
 
 ### 릴리스 근거와 라이선스 묶음
 
@@ -200,7 +200,7 @@ Go와 런타임/빌드 도구의 고정 버전별 라이선스 원문, 계약 �
 
 ### Actions 실행 런타임
 
-2026-10-19 공식 안정 릴리스 기준 checkout v7.0.1, setup-go v7.0.0의 검증된 commit SHA를 고정하며 모두 Node.js 24를 사용한다. ORAS는 공식 최신 안정 버전 v1.3.5를 Go로 설치한다. 별도 Node.js 20 기반 action을 추가하지 않는다. 실제 버전 릴리스 발행·GHCR 게시 실행과 Windows 일반 사용자·외부 서비스 수동 검증은 수행하기 전까지 미완료다.
+2026-10-19 공식 안정 릴리스 기준 checkout v7.0.1, setup-go v7.0.0의 검증된 commit SHA를 고정하며 모두 Node.js 24를 사용한다. 별도 Node.js 20 기반 action을 추가하지 않는다. 실제 버전 릴리스 발행·Release 첨부 실행과 Windows 일반 사용자·외부 서비스 수동 검증은 수행하기 전까지 미완료다.
 
 ### 업로더 역할 확장
 
@@ -210,4 +210,4 @@ Go와 런타임/빌드 도구의 고정 버전별 라이선스 원문, 계약 �
 
 GitHub Release의 prerelease boolean에서 채널을 도출하며 버전 접미사와 일치해야 한다. `RELEASE_CHANNEL=prerelease`와 근거의 `channel=prerelease`가 모두 일치하는 사전 버전에서만 Windows 10/11·Discord·Blob·리플레이/웹 회귀·회수 항목을 pending으로 허용한다. 각 pending 항목도 검증 한계를 설명한 HTTPS 문서를 가리킨다. 서버 check·strict·PostgreSQL 경쟁은 passed가 필수이며 자동 Linux/Windows tests/race/vet, PE·self-test·내장 origin 검사는 모든 채널에 유지한다. 다른 채널·누락·failed·commit/계약/version/origin 불일치는 게시를 거부한다.
 
-정식 채널의 기본값과 모든 실환경 검증 passed 요구는 유지한다. 사전 릴리스 패키지의 provenance·OCI description·실행 요약과 공개 Release에는 미서명·실환경 검증 미완료 상태를 표시한다. 같은 검증 근거를 빌드와 게시 직전에 재검사하고 게시 digest를 다운로드해 전체 파일 해시를 비교한다. 사전 릴리스는 실제 PC 검증이나 아카이브 조건을 완료하지 않는다.
+정식 채널의 기본값과 모든 실환경 검증 passed 요구는 유지한다. 사전 릴리스 패키지의 provenance·실행 요약과 공개 Release에는 미서명·실환경 검증 미완료 상태를 표시한다. 같은 검증 근거를 빌드와 게시 직전에 재검사하고 Release 첨부를 다운로드해 전체 파일 해시를 비교한다. 사전 릴리스는 실제 PC 검증이나 아카이브 조건을 완료하지 않는다.

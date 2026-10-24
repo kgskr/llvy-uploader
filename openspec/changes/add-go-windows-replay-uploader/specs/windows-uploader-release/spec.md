@@ -29,7 +29,7 @@ The release workflow SHALL require Go tests/static checks, shared API fixture co
 
 ### Requirement: Releases distribute one exe with traceable verification
 
-A protected release workflow SHALL publish the verified exe, SHA-256 checksum, dependency/license information and source commit provenance through GitHub Packages (GHCR) as an OCI file artifact after a GitHub Release is published. The distribution workflow SHALL listen only to `release.published`, validate the release tag and build that tag. Executable filenames, embedded application/resource versions and package tags SHALL use the normalized release version, not the commit hash; provenance SHALL retain the full source commit. Package write permission SHALL be limited to the release build/publish job. It SHALL pull the published digest and verify the downloaded checksums before declaring publication successful. Dependency/license notices SHALL be bundled. Real-PC acceptance SHALL remain pending until actual evidence is available and SHALL block stable publication. An explicitly marked test prerelease MAY follow the bounded prerelease evidence requirement below. Application binaries SHALL not be committed to Git. The workflow SHALL inspect non-system DLL/runtime dependencies and SHALL not rely on Node.js/WebView2 or developer toolchains installed on the runner. Fork/PR jobs SHALL not receive production or signing credentials. Signing status SHALL be accurately disclosed and SmartScreen suppression SHALL not be guaranteed.
+A protected release workflow SHALL publish the verified exe, SHA-256 checksum, dependency/license information and source commit provenance as directly downloadable GitHub Release assets after a GitHub Release is published. The distribution workflow SHALL listen only to `release.published`, validate the release tag and build that tag. Executable filenames, embedded application/resource versions SHALL use the normalized release version, not the commit hash; provenance SHALL retain the full source commit. Contents write permission SHALL be limited to the release build/publish job. It SHALL download the published assets and verify all downloaded checksums before declaring publication successful. Dependency/license notices SHALL be bundled. Real-PC acceptance SHALL remain pending until actual evidence is available and SHALL block stable publication. An explicitly marked test prerelease MAY follow the bounded prerelease evidence requirement below. Application binaries SHALL not be committed to Git. The workflow SHALL inspect non-system DLL/runtime dependencies and SHALL not rely on Node.js/WebView2 or developer toolchains installed on the runner. Fork/PR jobs SHALL not receive production or signing credentials. Signing status SHALL be accurately disclosed and SmartScreen suppression SHALL not be guaranteed.
 
 #### Scenario: Release artifact cannot run without a developer dependency
 
@@ -76,7 +76,7 @@ Production builds SHALL have no default server address and SHALL embed an explic
 #### Scenario: Publish a configured version
 
 - **WHEN** a release such as `v1.2.3` is published and Linux then Windows checks, origin validation, PE inspection and bounded self-test pass
-- **THEN** the workflow publishes `llvy-uploader-1.2.3-windows-x64.exe`, SHA-256 and build provenance in the GHCR package tagged `1.2.3`, labeled unsigned with verified acceptance evidence
+- **THEN** the workflow publishes `llvy-uploader-1.2.3-windows-x64.exe`, SHA-256 and build provenance as assets of that GitHub Release, labeled unsigned with verified acceptance evidence
 
 #### Scenario: Push code or a tag without publishing a release
 
@@ -100,11 +100,11 @@ Publication SHALL validate a reviewed evidence record with the exact client comm
 #### Scenario: Release has no external acceptance record
 
 - **WHEN** a stable release is published without complete matching passing evidence
-- **THEN** its workflow fails before uploading any executable to the registry
+- **THEN** its workflow fails before uploading any executable to the Release
 
 ### Requirement: Test prereleases preserve incomplete acceptance honestly
 
-A test package MAY be published only when the GitHub Release is marked prerelease, its validated version has a SemVer prerelease suffix, and its commit-bound evidence explicitly sets channel to prerelease. Server check, strict specs and PostgreSQL authorization races SHALL remain passed requirements. Each real-PC and external-service check SHALL be present with passed or pending status and an HTTPS evidence or limitation reference; failed and omitted checks SHALL be rejected. The build and publisher SHALL both validate the exact client commit, origin, version, contract hashes and server deployment. All Linux/Windows automatic checks, PE inspection, bounded self-test and package digest readback SHALL remain mandatory. Provenance, registry description and release notes SHALL explicitly identify the unsigned test prerelease and pending acceptance. Stable releases SHALL still require all checks passed. Prerelease publication SHALL NOT complete real-PC or external-service OpenSpec tasks.
+A test package MAY be published only when the GitHub Release is marked prerelease, its validated version has a SemVer prerelease suffix, and its commit-bound evidence explicitly sets channel to prerelease. Server check, strict specs and PostgreSQL authorization races SHALL remain passed requirements. Each real-PC and external-service check SHALL be present with passed or pending status and an HTTPS evidence or limitation reference; failed and omitted checks SHALL be rejected. The build and publisher SHALL both validate the exact client commit, origin, version, contract hashes and server deployment. All Linux/Windows automatic checks, PE inspection, bounded self-test and release asset readback SHALL remain mandatory. Provenance, workflow summary and release notes SHALL explicitly identify the unsigned test prerelease and pending acceptance. Stable releases SHALL still require all checks passed. Prerelease publication SHALL NOT complete real-PC or external-service OpenSpec tasks.
 
 #### Scenario: Explicit test prerelease retains external gaps
 
@@ -115,3 +115,17 @@ A test package MAY be published only when the GitHub Release is marked prereleas
 
 - **WHEN** the release flag, version suffix or evidence channel does not match the prerelease channel, or a stable release contains a pending check
 - **THEN** publication fails before uploading package files
+
+### Requirement: Release downloads need no registry tooling
+
+Publication SHALL use GitHub Release assets and SHALL NOT publish to GHCR or require Docker or ORAS. The publisher SHALL validate the release tag version, actual Git tag commit and prerelease channel before uploading. A rerun SHALL preserve existing assets, accept only byte-identical files and fail on conflicting content. It SHALL download all required assets and compare their SHA-256 hashes before reporting success.
+
+#### Scenario: User downloads a Windows executable
+
+- **WHEN** release publication succeeds
+- **THEN** the Release Assets section contains the versioned exe, checksum, build information, provenance, dependency notices and evidence record downloadable through a browser
+
+#### Scenario: Publication is retried
+
+- **WHEN** some required assets already exist
+- **THEN** identical files are reused and missing files are uploaded, while a differing existing file stops publication without replacement

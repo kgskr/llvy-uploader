@@ -52,7 +52,7 @@ Windows PowerShell에서 `LLVY_SERVER_ORIGIN` 환경변수를 지정한 뒤 `./s
 문서의 형제 경로 링크는 세 코드 저장소와 위키를 같은 상위 디렉토리에 배치했을 때 동작한다.
 배포 라이선스는 별도로 결정한다. 고정 의존성과 계약 사본의 권리 고지는 [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt)에 보존한다.
 
-[다운로드 빌드 workflow](.github/workflows/build-windows.yml)는 버전 Release가 `published`될 때만 검증된 exe·체크섬·출처를 GitHub Packages(GHCR)에 게시한다. `v1.2.3` 또는 `uploader-v1.2.3`의 파일명은 `llvy-uploader-1.2.3-windows-x64.exe`이며 패키지 tag는 `1.2.3`이다. 주소 변수가 없으면 빌드가 실패한다. 게시에는 정확한 앱·계약·서버 revision을 담은 `LLVY_RELEASE_EVIDENCE_JSON`이 필요하다. 정식 릴리스는 실제 Windows·외부 연동 검증 전체 통과를 요구한다. 명시적인 테스트용 사전 릴리스는 자동 검사 통과 후 외부 검증의 pending 상태와 근거를 패키지에 포함한다. [검증 근거 작성](docs/release/README.md)을 따른다. 설정·실행·다운로드 순서는 [개발 안내](docs/development.md#다운로드-빌드)를 따른다.
+[다운로드 빌드 workflow](.github/workflows/build-windows.yml)는 버전 Release가 `published`될 때만 검증된 exe·체크섬·출처를 GitHub Release에 직접 첨부한다. `v1.2.3` 또는 `uploader-v1.2.3`의 파일명은 `llvy-uploader-1.2.3-windows-x64.exe`이다. 주소 변수가 없으면 빌드가 실패한다. 게시에는 정확한 앱·계약·서버 revision을 담은 `LLVY_RELEASE_EVIDENCE_JSON`이 필요하다. 정식 릴리스는 실제 Windows·외부 연동 검증 전체 통과를 요구한다. 명시적인 테스트용 사전 릴리스는 자동 검사 통과 후 외부 검증의 pending 상태와 근거를 패키지에 포함한다. [검증 근거 작성](docs/release/README.md)을 따른다. 설정·실행·다운로드 순서는 [개발 안내](docs/development.md#다운로드-빌드)를 따른다.
 
 클라우드 CI는 Linux에서 공통 테스트·race·vet·형식 검사를 먼저 실행하고 모두 성공하면 Windows 테스트·race·vet를 실행한다. 배포 exe 빌드·PE 검사·self-test·패키지 게시는 릴리스 workflow에서만 실행한다. macOS CI와 macOS 실행파일은 제공하지 않으며 Mac 공통 검사는 로컬 개발용이다.
 
@@ -64,4 +64,4 @@ Windows PowerShell에서 `LLVY_SERVER_ORIGIN` 환경변수를 지정한 뒤 `./s
 
 ## 테스트용 사전 릴리스
 
-`0.1.0-rc.1`은 새 uploader 권한과 예약·refresh 복구를 확인하기 위한 미서명 Windows x64 테스트 버전이다. 실제 Windows 10/11 사용자 환경 및 Discord·Blob 전체 수용 검증은 미완료다. [릴리스 페이지](https://github.com/kgskr/llvy-uploader/releases/tag/v0.1.0-rc.1)의 게시 workflow가 성공한 뒤 [GitHub Packages](https://github.com/kgskr/llvy-uploader/pkgs/container/llvy-uploader)에서 받을 수 있다. 다운로드와 검증은 [개발 안내](docs/development.md#다운로드-빌드)를 따른다. 서버 주소는 `https://www.llvy.my`로 고정하며 업로더·관리자·오너 계정이 필요하다.
+`0.1.0-rc.1`은 새 uploader 권한과 예약·refresh 복구를 확인하기 위한 미서명 Windows x64 테스트 버전이다. 실제 Windows 10/11 사용자 환경 및 Discord·Blob 전체 수용 검증은 미완료다. [릴리스 페이지](https://github.com/kgskr/llvy-uploader/releases/tag/v0.1.0-rc.1)의 Assets 또는 [exe 직접 다운로드](https://github.com/kgskr/llvy-uploader/releases/download/v0.1.0-rc.1/llvy-uploader-0.1.0-rc.1-windows-x64.exe)에서 받을 수 있다. Docker·ORAS는 필요하지 않다. 다운로드와 검증은 [개발 안내](docs/development.md#다운로드-빌드)를 따른다. 서버 주소는 `https://www.llvy.my`로 고정하며 업로더·관리자·오너 계정이 필요하다.

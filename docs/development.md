@@ -51,7 +51,7 @@ PE 검사는 명시적 import table의 DLL을 검사한다. Win32 어댑터가 �
 [검사 workflow](../.github/workflows/check.yml)는 고정 action SHA, Go 1.27.0, `ubuntu-24.04`와 `windows-2025`를 순서대로 사용한다. Mac 검사는 로컬 개발 시 선택적으로 실행한다.
 2026-10-19에 확인한 공식 안정 버전 checkout v7.0.1·setup-go v7.0.0를 commit SHA로 고정한다. 두 액션은 Node.js 24로 실행되며 앱 exe에 Node.js 의존성을 추가하지 않는다.
 push·pull request·수동 실행에서 Linux 공통 테스트·race·vet·gofmt를 먼저 실행한다. Linux job이 성공해야 `needs: linux`로 연결한 Windows 전체 테스트·race·vet를 시작하며 Linux 실패·취소 시 Windows는 건너뛴다. Go 소스는 `.gitattributes`로 LF 체크아웃을 고정해 Windows에서도 gofmt 결과를 비교한다. race 검사 단계에서만 `CGO_ENABLED=1`, `CC=gcc`를 지정하며 exe 빌드는 `CGO_ENABLED=0`을 유지한다. 최초 실행에서 발견한 계약 JSON의 CRLF 체크아웃 문제는 `.gitattributes`의 LF 고정으로 수정했다. 실행별 결과와 남은 범위는 [검증 기록](validation/2026-10-18-server-integration.md#2026-10-19-windows-ci-줄바꿈-수정)을 따른다.
-일반 검사는 read 권한과 `pull_request`를 사용하며 배포 exe를 만들지 않는다. 양쪽 OS에서 버전 파싱·파일명·리소스 생성·PowerShell 문법도 검사한다. 릴리스 workflow는 `release.published`에서만 Windows exe 빌드·PE 검사·self-test·내장 주소 검사를 거쳐 GHCR에 게시한다. 버전 Release 자체는 workflow가 생성하지 않는다.
+일반 검사는 read 권한과 `pull_request`를 사용하며 배포 exe를 만들지 않는다. 양쪽 OS에서 버전 파싱·파일명·리소스 생성·PowerShell 문법도 검사한다. 릴리스 workflow는 `release.published`에서만 Windows exe 빌드·PE 검사·self-test·내장 주소 검사를 거쳐 Release에 직접 첨부한다. 버전 Release 자체는 workflow가 생성하지 않는다.
 
 정식 릴리스에는 서버 원본 계약의 commit·체크섬과 호환 서버 검증, Windows 10/11 일반 사용자·한국어 IME·DPI·OneDrive·실제 LoL 경로, Discord·Blob·ROFL 통합 검증이 필요하다.
 고정 의존성 라이선스 묶음은 [THIRD_PARTY_NOTICES.txt](../THIRD_PARTY_NOTICES.txt)에 있다. 릴리스 게시 권한/태그 보호, 아이콘과 서명 상태는 별도로 확정한다. 프로젝트 라이선스는 기존 LLVY에서 자동 상속하지 않는다.
@@ -79,25 +79,20 @@ go build -tags development -ldflags "-H windowsgui -X llvy-uploader/internal/des
 
 1. 저장소 Settings → Secrets and variables → Actions → Variables에 `LLVY_SERVER_ORIGIN`을 등록한다. 값은 실제 서버의 HTTPS origin이며 exe와 출처 정보에 포함된다.
 2. [검증 근거](release/README.md)를 실제 검증으로 채우고 `LLVY_RELEASE_EVIDENCE_JSON` 저장소 변수에 등록한다. 근거는 정확한 앱 commit·버전·origin에 묶인다. 예시·누락은 통과하지 않는다. 정식 릴리스는 pending도 거부하며, 명시적인 테스트용 prerelease만 [채널 조건](release/README.md#테스트용-사전-릴리스)에 따라 외부 검증 pending을 허용한다. 빌드할 commit의 버전 태그로 GitHub Release를 **Publish release**한다. `v1.2.3` 또는 `uploader-v1.2.3`, `v1.2.3-rc.1`을 지원한다. draft 저장·tag/push·수동 일반 검사는 배포 빌드를 실행하지 않는다. 버전 숫자는 Windows 리소스 범위 0–65535이며 선행 0, `+build` 메타데이터와 경로/공백은 허용하지 않는다.
-3. **Publish Windows package**가 Linux 공통 검사 → Windows tests/race/vet → exe 빌드·PE·self-test·내장 주소 검사를 수행한다. `LLVY_SERVER_ORIGIN` 또는 일치하는 수용 검증 근거가 없거나 검사가 실패하면 게시하지 않는다.
-4. 통과하면 GitHub Packages의 `ghcr.io/<owner>/llvy-uploader:1.2.3`에 OCI 파일 패키지를 저장한다. 파일은 `llvy-uploader-1.2.3-windows-x64.exe`, `SHA256SUMS.txt`, `build-info.txt`, `provenance.txt`, `THIRD_PARTY_NOTICES.txt`, `release-evidence.json`이다. 해시는 검증/출처 정보에 보존하고 파일명에는 버전을 쓴다.
-5. 게시 단계는 ORAS v1.3.5를 사용하며 `GITHUB_TOKEN`과 해당 job의 `packages: write`로 인증한다. 저장소 source annotation을 포함하고 게시한 digest를 다시 다운로드해 모든 파일의 SHA-256을 대조한다. 실행 요약에서 package reference와 검증된 digest를 확인한다.
+3. **Publish Windows executable**가 Linux 공통 검사 → Windows tests/race/vet → exe 빌드·PE·self-test·내장 주소 검사를 수행한다. `LLVY_SERVER_ORIGIN` 또는 일치하는 수용 검증 근거가 없거나 검사가 실패하면 게시하지 않는다.
+4. 통과하면 해당 GitHub Release의 **Assets**에 `llvy-uploader-1.2.3-windows-x64.exe`, `SHA256SUMS.txt`, `build-info.txt`, `provenance.txt`, `THIRD_PARTY_NOTICES.txt`, `release-evidence.json`을 첨부한다. 실행 파일명에는 버전을 쓰고 source commit은 provenance에 보존한다.
+5. 게시 단계만 `GH_TOKEN`을 받으며 배포 job은 `contents: write`를 사용한다. 태그 버전·실제 Git commit·Release 채널을 검증한 뒤 첨부하고, 모든 파일을 다시 내려받아 SHA-256을 대조한다. 기존 첨부는 덮어쓰지 않는다. 재실행 시 같은 파일은 재사용하고 누락 파일만 올리며 다른 바이트가 있으면 실패한다.
 
-[ORAS](https://oras.land/docs/installation/)를 설치한 뒤 다음처럼 내려받는다. `<owner>`는 해당 저장소 소유자로 바꾼다.
+사용자는 [릴리스 목록](https://github.com/kgskr/llvy-uploader/releases)에서 원하는 버전의 **Assets → `.exe`**를 클릭해 다운로드한다. Docker·ORAS·GitHub CLI 설치는 필요하지 않다. 다운로드한 파일과 같은 릴리스의 `SHA256SUMS.txt`를 다음처럼 비교할 수 있다.
 
 ```powershell
-oras pull ghcr.io/<owner>/llvy-uploader:1.2.3 --output ./download
-Get-FileHash ./download/llvy-uploader-1.2.3-windows-x64.exe -Algorithm SHA256
-Get-Content ./download/SHA256SUMS.txt
-Get-Content ./download/provenance.txt
+Get-FileHash ./llvy-uploader-1.2.3-windows-x64.exe -Algorithm SHA256
+Get-Content ./SHA256SUMS.txt
 ```
 
-최초 GHCR 패키지는 GitHub의 기본 공개 범위를 따른다. private 패키지 다운로드는 `read:packages` 권한으로 ORAS 로그인이 필요하며 공개 다운로드를 원하면 패키지 설정에서 visibility를 public으로 변경해야 한다. workflow는 계정/패키지 공개 범위를 바꾸지 않는다. Actions의 30일 임시 아티팩트나 Release 첨부 파일 대신 Packages에 저장하며 삭제 전까지 버전별로 관리한다. 같은 버전을 재게시하면 태그가 갱신될 수 있으므로 고정된 다운로드에는 실행 요약의 digest를 사용한다.
+배포 workflow는 GHCR 패키지를 만들지 않는다. `0.1.0-rc.1`의 이전 GHCR 게시 이력은 그대로 남아 있으며 같은 검증된 exe를 Release에도 첨부했다. 기존 버전 태그를 옮기거나 파일을 교체하지 않는다. 변경된 workflow는 이 수정이 포함된 commit에서 만드는 다음 릴리스부터 적용한다.
 
-현재 산출물은 미서명 개발 빌드다. 실제 버전 Release를 발행한 GHCR 게시 실행과 Windows 10/11 일반 사용자·실제 서버 업로드 검증은 별도로 확인한다. 서버 주소를 변경하려면 새 버전으로 다시 빌드한다.
-
-- [ORAS의 GHCR 파일 게시](https://oras.land/docs/1.2/how_to_guides/remote_registries/)
-- [GitHub Container registry 인증·저장소 연결·공개 범위](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+현재 산출물은 미서명 테스트용 사전 릴리스다. Windows 10/11 일반 사용자·실제 서버 전체 업로드 검증은 별도로 남아 있다. 서버 주소를 변경하려면 새 버전으로 다시 빌드한다.
 
 ## 업로더 역할 검사
 

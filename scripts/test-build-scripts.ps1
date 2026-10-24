@@ -35,3 +35,5 @@ foreach ($pair in @(@('1.2.3', 'prerelease'), @('1.2.3-rc.1', 'stable'), @('1.2.
     try { Assert-UploaderReleaseChannel -Version $pair[0] -Channel $pair[1] } catch { $rejected = $true }
     if (-not $rejected) { throw 'Accepted mismatched release channel' }
 }
+
+& (Join-Path $PSScriptRoot "test-publish-release.ps1")

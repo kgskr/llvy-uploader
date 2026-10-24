@@ -1,4 +1,4 @@
-name: Publish Windows package
+name: Publish Windows executable
 on:
   release:
     types: [published]
@@ -65,8 +65,7 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 20
     permissions:
-      contents: read
-      packages: write
+      contents: write
     env:
       LLVY_SERVER_ORIGIN: ${{ vars.LLVY_SERVER_ORIGIN }}
       LLVY_RELEASE_EVIDENCE_JSON: ${{ vars.LLVY_RELEASE_EVIDENCE_JSON }}
@@ -104,11 +103,8 @@ jobs:
         run: |
           ./scripts/build.ps1 -Version $env:RELEASE_VERSION
           ./scripts/verify-build.ps1 -Version $env:RELEASE_VERSION
-      - name: Install ORAS
-        run: go install oras.land/oras/cmd/oras@v1.3.5
-      - name: Publish and verify GitHub Packages download
+      - name: Publish and verify Release downloads
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ needs.linux.outputs.version }}
-          SOURCE_COMMIT: ${{ needs.linux.outputs.commit }}
-        run: ./scripts/publish-package.ps1 -Version $env:RELEASE_VERSION -Repository $env:GITHUB_REPOSITORY -Commit $env:SOURCE_COMMIT
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: ./scripts/publish-release.ps1 -Version $env:RELEASE_VERSION -Tag $env:RELEASE_TAG -Repository $env:GITHUB_REPOSITORY -Commit $env:SOURCE_COMMIT

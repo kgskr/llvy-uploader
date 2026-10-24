@@ -23,3 +23,11 @@ Go 1.27.0에서 `go mod verify`, `go test -race -timeout 120s ./...`, `go vet ./
 - [게시 실행](https://github.com/kgskr/llvy-uploader/actions/runs/40063652143) 성공: Linux/Windows tests·race·vet, PE·self-test·설정 검사 및 GHCR digest 재다운로드 후 exe·체크섬·빌드/출처·라이선스·근거 파일 전체 해시 대조 완료.
 
 사전 릴리스에는 uploader/admin/owner 역할 지원과 예약·refresh 복구 수정이 포함된다. 실제 PC와 외부 서비스 검증은 release-evidence.json에 pending으로 보존하며 OpenSpec은 아카이브하지 않는다.
+
+## Release 직접 다운로드
+
+`v0.1.0-rc.1`의 원래 검증된 exe와 체크섬·출처·고지·근거 6개 파일을 같은 GitHub Release에 첨부했다. 공개 exe 다운로드와 SHA-256 `17e80ade870dda10db931640df5afbf01c6afd701b5b1a23b19cb69a6ac85454` 일치를 확인했다. 기존 태그와 바이너리는 변경하지 않았다.
+
+후속 workflow는 GHCR/ORAS 게시를 제거하고 Release 첨부를 사용한다. 정확한 태그·commit·채널, 기존 파일 일치, 모든 첨부의 다운로드 해시를 확인한다. 실제 PC·외부 서비스 수용 검증은 계속 미완료다.
+
+후속 배포 스크립트의 PowerShell 문법·버전 검사와 게시 회귀 검사(최초 게시, 동일/부분 재실행, 기존 파일 충돌, commit/채널 불일치, 다운로드 실패, 다운로드 해시 불일치), actionlint 및 OpenSpec strict를 통과했다. 게시 회귀 검사의 외부 명령은 격리된 모의 구현이며 실제 Windows UI·외부 연동 검증을 대체하지 않는다.

@@ -140,3 +140,9 @@ Windows 단독 구성은 17절의 Linux 선행·Windows 후속 구성으로 대�
 - [x] 24.4 사전 릴리스와 GHCR 버전을 게시하고 digest 다운로드·해시 일치를 확인하여 미검증 범위와 사용 안내를 기록한다. 실제 PC·외부 검증은 열린 상태로 유지한다.
 
 2026-10-24 `v0.1.0-rc.1`을 앱 `8667365dad2fa242b7423945aead76e1f530610e`에서 사전 릴리스로 발행했다. [게시 실행](https://github.com/kgskr/llvy-uploader/actions/runs/40063652143)의 Linux·Windows race/vet, PE·exe self-test·내장 주소 검사, GHCR 게시·digest 다운로드 및 모든 파일 해시 비교가 성공했다. 19.4 완료 범위는 테스트용 사전 릴리스 게시이며 실제 PC·외부 검증과 정식 릴리스 완료를 뜻하지 않는다.
+
+## 25. Release 실행 파일 직접 다운로드
+
+- [x] 25.1 GHCR/ORAS 게시를 제거하고 정확한 Release 태그·commit·채널을 확인하여 exe와 검증 자료를 첨부한다.
+- [x] 25.2 재실행 시 동일 파일 재사용·변경 파일 거부·다운로드 해시 검증을 검사한다.
+- [x] 25.3 README·개발 안내·위키·명세를 맞추고 workflow·PowerShell·strict 검증 후 푸시한다.

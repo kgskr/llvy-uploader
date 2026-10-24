@@ -17,7 +17,7 @@
 
 완성 JSON을 저장소 Actions 변수 `LLVY_RELEASE_EVIDENCE_JSON`에 등록한다. 앱 commit·버전·origin이 달라지면 해당 후보를 다시 검증하고 기록을 갱신한다. 정식 릴리스 workflow는 예시 주소·pending·누락·revision 불일치를 거부한다. 이 검사는 검토된 기록의 일관성을 확인하며 링크 내용이나 원격 테스트 실행의 진실성을 자동으로 증명하지 않는다. Release 게시 권한과 변수 편집 권한을 제한하고 태그 보호 정책으로 검토된 commit을 게시한다.
 
-일반 로컬 빌드는 근거 없이 가능하다. 게시 workflow와 게시 스크립트는 모두 근거를 검사한다. 배포 패키지는 `release-evidence.json`과 [의존성 라이선스 고지](../../THIRD_PARTY_NOTICES.txt)를 포함하며 게시 후 digest로 다시 내려받아 모든 파일을 대조한다. 외부 고지는 업로더 자체 코드의 라이선스 결정을 대신하지 않는다.
+일반 로컬 빌드는 근거 없이 가능하다. 게시 workflow와 게시 스크립트는 모두 근거를 검사한다. 배포 패키지는 `release-evidence.json`과 [의존성 라이선스 고지](../../THIRD_PARTY_NOTICES.txt)를 포함하며 GitHub Release에 첨부한 뒤 다시 내려받아 모든 파일의 SHA-256을 대조한다. 외부 고지는 업로더 자체 코드의 라이선스 결정을 대신하지 않는다.
 
 로컬 검사는 네트워크 요청 없이 수행한다.
 
@@ -36,6 +36,6 @@ GitHub Release의 **Set as a pre-release**를 켜고 `v0.1.0-rc.1`처럼 SemVer 
 
 사전 릴리스도 정확한 client/version/origin/contract/server 대응과 `serverCheck`, `serverOpenSpec`, `postgresAuthorizationRace`의 passed 근거가 필요하다. `windows10`, `windows11`, `discordLogin`, `blobPublicPrivate`, `replayDuplicateBrowser`, `revocation`은 실제 검증 전까지 pending으로 남길 수 있으며, 각 `evidenceUrl`은 미검증 범위를 설명한 HTTPS 문서를 가리켜야 한다. failed·누락·예시 URL은 허용하지 않는다.
 
-Linux/Windows tests·race·vet, PE 검사, 실행 파일 self-test와 내장 서버 주소 검사, 게시 후 digest 다운로드와 파일 해시 대조는 사전 릴리스에서도 필수다. provenance·패키지 설명·Release 안내는 미서명 테스트용이며 실제 PC와 외부 서비스 수용 검증이 남아 있음을 명시한다. GitHub-hosted Windows 검사 성공은 Windows 10/11 일반 사용자 UI·IME·DPI·OneDrive·실제 Discord/Blob 사용을 대체하지 않는다. 이 항목들은 OpenSpec에서 열린 상태를 유지한다.
+Linux/Windows tests·race·vet, PE 검사, 실행 파일 self-test와 내장 서버 주소 검사, 게시 후 Release 첨부 다운로드와 파일 해시 대조는 사전 릴리스에서도 필수다. provenance·실행 요약·Release 안내는 미서명 테스트용이며 실제 PC와 외부 서비스 수용 검증이 남아 있음을 명시한다. GitHub-hosted Windows 검사 성공은 Windows 10/11 일반 사용자 UI·IME·DPI·OneDrive·실제 Discord/Blob 사용을 대체하지 않는다. 이 항목들은 OpenSpec에서 열린 상태를 유지한다.
 
 사전 릴리스 근거를 로컬 확인할 때만 `RELEASE_CHANNEL=prerelease`를 지정한다. 게시 workflow에서는 이 값을 수동 입력으로 받지 않고 Release metadata로 결정한다.
