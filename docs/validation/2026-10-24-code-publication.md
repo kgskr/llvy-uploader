@@ -13,3 +13,13 @@ Go 1.27.0에서 `go mod verify`, `go test -race -timeout 120s ./...`, `go vet ./
 앱 코드 `81b2a4a3be58017a6039da5b154e1aad5d69c29c`의 [Linux/Windows CI](https://github.com/kgskr/llvy-uploader/actions/runs/40063249264)가 통과했다. 이후 게시 채널 변경은 Go 회귀 테스트로 정식 채널의 pending 거부, 사전 채널의 서버 검사 필수 조건, 버전/channel/commit/계약 불일치 및 누락·failed·잘못된 근거 URL 거부를 검증한다. 최종 게시 workflow 자체에서 같은 commit의 전체 Linux/Windows 검사와 exe self-test를 다시 수행한다.
 
 버전 `0.1.0-rc.1`의 실환경 검증 상태는 Windows 10/11·Discord·Blob·실제 리플레이/웹 회귀·회수 모두 pending이다. 서버 check·OpenSpec·PostgreSQL 경쟁 검증은 [서버 배포 기록](https://github.com/kgskr/llvy/blob/2b8491476d21cd1317a363243ee6fa60003f4d4c/docs/validation/2026-10-23-uploader-deployment.md)을 따른다. 테스트용 게시가 이 pending 항목을 완료하거나 정식 지원을 확정하지 않는다.
+
+## 게시 결과
+
+- 앱 commit: `8667365dad2fa242b7423945aead76e1f530610e`.
+- [사전 릴리스 v0.1.0-rc.1](https://github.com/kgskr/llvy-uploader/releases/tag/v0.1.0-rc.1), 운영 origin `https://www.llvy.my`.
+- 패키지: `ghcr.io/kgskr/llvy-uploader:0.1.0-rc.1`.
+- 고정 digest: `sha256:06d4eda6fa6d9c49fe0bff4fc851c835e267938ebd63dacf2040eb4b5e4369f7`.
+- [게시 실행](https://github.com/kgskr/llvy-uploader/actions/runs/40063652143) 성공: Linux/Windows tests·race·vet, PE·self-test·설정 검사 및 GHCR digest 재다운로드 후 exe·체크섬·빌드/출처·라이선스·근거 파일 전체 해시 대조 완료.
+
+사전 릴리스에는 uploader/admin/owner 역할 지원과 예약·refresh 복구 수정이 포함된다. 실제 PC와 외부 서비스 검증은 release-evidence.json에 pending으로 보존하며 OpenSpec은 아카이브하지 않는다.

@@ -100,7 +100,7 @@ Windows 단독 구성은 17절의 Linux 선행·Windows 후속 구성으로 대�
 - [x] 19.1 배포 workflow를 release.published 전용으로 변경하고 일반 CI의 배포 exe 빌드를 제거한다. Linux 성공 후 Windows 검사를 유지한다.
 - [x] 19.2 릴리스 버전을 검증하고 exe 파일명·내장 버전·PE 리소스·체크섬에 반영한다. 버전과 스크립트 회귀 검사를 추가한다.
 - [x] 19.3 GHCR에 exe·체크섬·출처 OCI 패키지를 게시하고 digest 다운로드 재검증을 구성한다. 문서·위키·strict 검증과 일반 Linux→Windows CI를 확인한다.
-- [ ] 19.4 실제 버전 릴리스 게시 후 Windows 배포 빌드·GHCR 게시·다운로드 검증 결과를 기록한다. 버전 릴리스가 발행되기 전에는 완료 처리하지 않는다.
+- [x] 19.4 실제 버전 릴리스 게시 후 Windows 배포 빌드·GHCR 게시·다운로드 검증 결과를 기록한다. 버전 릴리스가 발행되기 전에는 완료 처리하지 않는다.
 
 ## 20. 예약 복구와 명시적 새 시도
 
@@ -136,5 +136,7 @@ Windows 단독 구성은 17절의 Linux 선행·Windows 후속 구성으로 대�
 
 - [x] 24.1 GitHub prerelease 표시·버전 접미사·근거 channel 일치를 검사하고 정식 릴리스의 모든 수용 검증 passed 조건을 유지한다.
 - [x] 24.2 사전 릴리스의 pending 외부 검증 표기, 빌드/게시 이중 검증, provenance·OCI 표기와 회귀 검사를 추가한다.
-- [ ] 24.3 공통 Go·명세 검증 후 정확한 commit을 푸시하고 Linux/Windows CI·배포 exe 자체 검사를 통과시킨다.
-- [ ] 24.4 사전 릴리스와 GHCR 버전을 게시하고 digest 다운로드·해시 일치를 확인하여 미검증 범위와 사용 안내를 기록한다. 실제 PC·외부 검증은 열린 상태로 유지한다.
+- [x] 24.3 공통 Go·명세 검증 후 정확한 commit을 푸시하고 Linux/Windows CI·배포 exe 자체 검사를 통과시킨다.
+- [x] 24.4 사전 릴리스와 GHCR 버전을 게시하고 digest 다운로드·해시 일치를 확인하여 미검증 범위와 사용 안내를 기록한다. 실제 PC·외부 검증은 열린 상태로 유지한다.
+
+2026-10-24 `v0.1.0-rc.1`을 앱 `8667365dad2fa242b7423945aead76e1f530610e`에서 사전 릴리스로 발행했다. [게시 실행](https://github.com/kgskr/llvy-uploader/actions/runs/40063652143)의 Linux·Windows race/vet, PE·exe self-test·내장 주소 검사, GHCR 게시·digest 다운로드 및 모든 파일 해시 비교가 성공했다. 19.4 완료 범위는 테스트용 사전 릴리스 게시이며 실제 PC·외부 검증과 정식 릴리스 완료를 뜻하지 않는다.

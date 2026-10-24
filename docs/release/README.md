@@ -1,6 +1,6 @@
 # 릴리스 수용 검증 근거
 
-현재 상태: 자동 검사 구성은 있지만 실제 Windows 10/11·Blob·Discord 수용 검증과 버전 릴리스는 미완료다. [예시](evidence.example.json)는 의도적으로 통과하지 않는 작성 양식이다.
+현재 상태: 자동 검사 구성은 있지만 실제 Windows 10/11·Blob·Discord 수용 검증과 정식 버전 릴리스는 미완료다. 테스트용 `0.1.0-rc.1`의 게시 결과는 [검증 기록](../validation/2026-10-24-code-publication.md)을 따른다. [예시](evidence.example.json)는 의도적으로 통과하지 않는 작성 양식이다.
 
 검증 담당자는 게시할 정확한 앱 commit·버전·빌드 origin으로 후보를 만들고 아래 검사를 수행한다. 실제 결과와 재현 범위가 있는 HTTPS 문서 또는 CI 실행 링크를 각 `evidenceUrl`에 넣는다. 원본의 계약 revision·SHA-256은 `contracts/desktop-v1/source.json`과 일치해야 한다. `serverCommit`은 호환 배포에서 검증한 서버 구현 commit이며 계약 파일만 추가한 commit과 구분한다. `deploymentUrl`과 근거에는 배포 URL의 commit 대응을 기록한다. 공개 산출물에 포함되는 URL은 인증 정보·query·fragment 없이 작성한다. 실제로 통과한 검사만 `status`를 `passed`로 변경한다. 정식 릴리스에는 모든 검사의 통과가 필요하다.
 
