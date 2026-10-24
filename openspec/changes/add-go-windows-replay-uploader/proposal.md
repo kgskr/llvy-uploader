@@ -30,3 +30,7 @@
 ## Impact
 
 앱과 CI·릴리스·사용자 문서를 위한 활성 구현 계획이다. 로컬 파일 탐색, Windows 어댑터와 빌드·검사 구성, 고정 후보 계약 기반 로그인·전송·복구를 구현했다. 서버 인증·DB·API는 [LLVY 서버 계획](../../../../llvy/openspec/changes/add-desktop-replay-upload-api/proposal.md)에 있다. 실제 Windows·외부 서비스 검증과 릴리스는 미완료다. 기존 요구사항과 리뷰의 목적지는 [분리 이력](../../../docs/repository-split.md)을 따른다.
+
+## 테스트용 사전 릴리스
+
+정식 릴리스의 실제 PC·외부 서비스 검증 조건은 유지한다. GitHub prerelease 표시와 SemVer 사전 버전 접미사가 모두 있는 테스트용 패키지에 한해, 서버 check·strict·PostgreSQL 검증 및 Linux/Windows 자동 검사를 통과하고 실제 PC·외부 검증의 pending 상태를 명시한 근거를 포함하면 게시할 수 있다. 이를 정식 지원이나 OpenSpec 전체 완료로 기록하지 않는다.

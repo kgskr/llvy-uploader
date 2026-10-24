@@ -27,3 +27,11 @@ try {
     Remove-Item $tempResource
 }
 Write-Output 'Release version, filenames, resources and PowerShell syntax checks passed.'
+
+Assert-UploaderReleaseChannel -Version '1.2.3' -Channel 'stable'
+Assert-UploaderReleaseChannel -Version '1.2.3-rc.1' -Channel 'prerelease'
+foreach ($pair in @(@('1.2.3', 'prerelease'), @('1.2.3-rc.1', 'stable'), @('1.2.3', 'unknown'))) {
+    $rejected = $false
+    try { Assert-UploaderReleaseChannel -Version $pair[0] -Channel $pair[1] } catch { $rejected = $true }
+    if (-not $rejected) { throw 'Accepted mismatched release channel' }
+}

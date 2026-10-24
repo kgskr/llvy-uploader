@@ -78,7 +78,7 @@ go build -tags development -ldflags "-H windowsgui -X llvy-uploader/internal/des
 ## 다운로드 빌드
 
 1. 저장소 Settings → Secrets and variables → Actions → Variables에 `LLVY_SERVER_ORIGIN`을 등록한다. 값은 실제 서버의 HTTPS origin이며 exe와 출처 정보에 포함된다.
-2. [검증 근거](release/README.md)를 실제 검증으로 채우고 `LLVY_RELEASE_EVIDENCE_JSON` 저장소 변수에 등록한다. 근거는 정확한 앱 commit·버전·origin에 묶인다. 예시나 pending 기록은 통과하지 않는다. 빌드할 commit의 버전 태그로 GitHub Release를 **Publish release**한다. `v1.2.3` 또는 `uploader-v1.2.3`, `v1.2.3-rc.1`을 지원한다. draft 저장·tag/push·수동 일반 검사는 배포 빌드를 실행하지 않는다. 버전 숫자는 Windows 리소스 범위 0–65535이며 선행 0, `+build` 메타데이터와 경로/공백은 허용하지 않는다.
+2. [검증 근거](release/README.md)를 실제 검증으로 채우고 `LLVY_RELEASE_EVIDENCE_JSON` 저장소 변수에 등록한다. 근거는 정확한 앱 commit·버전·origin에 묶인다. 예시·누락은 통과하지 않는다. 정식 릴리스는 pending도 거부하며, 명시적인 테스트용 prerelease만 [채널 조건](release/README.md#테스트용-사전-릴리스)에 따라 외부 검증 pending을 허용한다. 빌드할 commit의 버전 태그로 GitHub Release를 **Publish release**한다. `v1.2.3` 또는 `uploader-v1.2.3`, `v1.2.3-rc.1`을 지원한다. draft 저장·tag/push·수동 일반 검사는 배포 빌드를 실행하지 않는다. 버전 숫자는 Windows 리소스 범위 0–65535이며 선행 0, `+build` 메타데이터와 경로/공백은 허용하지 않는다.
 3. **Publish Windows package**가 Linux 공통 검사 → Windows tests/race/vet → exe 빌드·PE·self-test·내장 주소 검사를 수행한다. `LLVY_SERVER_ORIGIN` 또는 일치하는 수용 검증 근거가 없거나 검사가 실패하면 게시하지 않는다.
 4. 통과하면 GitHub Packages의 `ghcr.io/<owner>/llvy-uploader:1.2.3`에 OCI 파일 패키지를 저장한다. 파일은 `llvy-uploader-1.2.3-windows-x64.exe`, `SHA256SUMS.txt`, `build-info.txt`, `provenance.txt`, `THIRD_PARTY_NOTICES.txt`, `release-evidence.json`이다. 해시는 검증/출처 정보에 보존하고 파일명에는 버전을 쓴다.
 5. 게시 단계는 ORAS v1.3.5를 사용하며 `GITHUB_TOKEN`과 해당 job의 `packages: write`로 인증한다. 저장소 source annotation을 포함하고 게시한 digest를 다시 다운로드해 모든 파일의 SHA-256을 대조한다. 실행 요약에서 package reference와 검증된 digest를 확인한다.
@@ -101,4 +101,4 @@ Get-Content ./download/provenance.txt
 
 ## 업로더 역할 검사
 
-`go test ./internal/desktop -run TestSessionRoles`는 uploader/admin/owner session 허용과 viewer/unknown 거부를 확인한다. Go 전체 test/vet/race와 Windows amd64 교차 빌드를 확인했다. 새 uploader 서버 계약은 로컬 commit과 사본/hash를 고정했다. 원격 공개 및 실제 Windows·외부 검증은 [호환 상태](../README.md#업로더-역할-호환)의 미완료 조건이다.
+`go test ./internal/desktop -run TestSessionRoles`는 uploader/admin/owner session 허용과 viewer/unknown 거부를 확인한다. Go 전체 test/vet/race와 Windows amd64 교차 빌드를 확인했다. 새 uploader 서버 계약은 원격 commit과 사본/hash를 고정했다. 실제 Windows·외부 검증은 [호환 상태](../README.md#업로더-역할-호환)의 미완료 조건이다.

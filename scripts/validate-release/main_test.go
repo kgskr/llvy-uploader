@@ -64,3 +64,52 @@ func TestReleaseEvidenceBinding(t *testing.T) {
 		}
 	}
 }
+
+func TestPrereleaseEvidenceBoundaries(t *testing.T) {
+	makePending := func() (evidence, source) {
+		e, p := validEvidence()
+		e.Channel = "prerelease"
+		e.Version = "0.1.0-rc.1"
+		for _, name := range requiredChecks[3:] {
+			e.Checks[name] = check{"pending", "https://github.com/org/repo/blob/main/docs/release.md"}
+		}
+		return e, p
+	}
+	e, p := makePending()
+	raw, _ := json.Marshal(e)
+	if _, err := validateForChannel(raw, e.Version, e.ClientCommit, e.Origin, p, "prerelease"); err != nil {
+		t.Fatal(err)
+	}
+	for _, channel := range []string{"", "stable", "preview", "PRERELEASE"} {
+		if _, err := validateForChannel(raw, e.Version, e.ClientCommit, e.Origin, p, channel); err == nil {
+			t.Fatalf("accepted pending evidence in %q", channel)
+		}
+	}
+	for _, name := range requiredChecks[:3] {
+		e, p := makePending()
+		e.Checks[name] = check{"pending", "https://github.com/org/repo/issues/1"}
+		raw, _ := json.Marshal(e)
+		if _, err := validateForChannel(raw, e.Version, e.ClientCommit, e.Origin, p, "prerelease"); err == nil {
+			t.Fatalf("accepted incomplete server gate %s", name)
+		}
+	}
+	mutations := []func(*evidence){
+		func(e *evidence) { e.Version = "0.1.0" },
+		func(e *evidence) { e.Channel = "" },
+		func(e *evidence) { e.Channel = "stable" },
+		func(e *evidence) { e.ClientCommit = strings.Repeat("e", 40) },
+		func(e *evidence) { e.ContractSHA256["schema.json"] = strings.Repeat("e", 64) },
+		func(e *evidence) { delete(e.Checks, "windows10") },
+		func(e *evidence) { e.Checks["windows10"] = check{"failed", "https://github.com/org/repo/issues/1"} },
+		func(e *evidence) { e.Checks["windows10"] = check{"pending", ""} },
+		func(e *evidence) { e.Checks["windows10"] = check{"pending", "https://example.com"} },
+	}
+	for i, mutate := range mutations {
+		e, p := makePending()
+		mutate(&e)
+		raw, _ := json.Marshal(e)
+		if _, err := validateForChannel(raw, e.Version, strings.Repeat("c", 40), e.Origin, p, "prerelease"); err == nil {
+			t.Fatalf("accepted invalid prerelease case %d", i)
+		}
+	}
+}

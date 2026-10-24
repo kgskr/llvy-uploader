@@ -14,6 +14,7 @@ jobs:
     outputs:
       version: ${{ steps.release.outputs.version }}
       commit: ${{ steps.release.outputs.commit }}
+      channel: ${{ steps.release.outputs.channel }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -30,9 +31,14 @@ jobs:
         shell: pwsh
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           . ./scripts/version.ps1
           $info = Get-UploaderReleaseVersion -Tag $env:RELEASE_TAG
+          if ($env:RELEASE_PRERELEASE -cnotin @('true', 'false')) { throw 'Missing GitHub release channel' }
+          $channel = if ($env:RELEASE_PRERELEASE -ceq 'true') { 'prerelease' } else { 'stable' }
+          Assert-UploaderReleaseChannel -Version $info.Version -Channel $channel
+          "channel=$channel" >> $env:GITHUB_OUTPUT
           "version=$($info.Version)" >> $env:GITHUB_OUTPUT
           $commit = git rev-parse --verify HEAD
           if ($LASTEXITCODE -ne 0) { throw 'Cannot read source commit' }
@@ -66,6 +72,7 @@ jobs:
       LLVY_RELEASE_EVIDENCE_JSON: ${{ vars.LLVY_RELEASE_EVIDENCE_JSON }}
       RELEASE_VERSION: ${{ needs.linux.outputs.version }}
       SOURCE_COMMIT: ${{ needs.linux.outputs.commit }}
+      RELEASE_CHANNEL: ${{ needs.linux.outputs.channel }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

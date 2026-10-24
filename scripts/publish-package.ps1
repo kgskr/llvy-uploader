@@ -6,6 +6,9 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'version.ps1')
 $versionInfo = Get-UploaderVersion -Version $Version
+$channel = if ([string]::IsNullOrEmpty($env:RELEASE_CHANNEL)) { 'stable' } else { $env:RELEASE_CHANNEL }
+Assert-UploaderReleaseChannel -Version $Version -Channel $channel
+$description = if ($channel -ceq 'prerelease') { 'Unsigned test prerelease; real PC and external acceptance pending' } else { 'Unsigned Windows uploader; reviewed acceptance included' }
 if ($Repository -cnotmatch '\A[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+\z' -or $Commit -cnotmatch '\A[0-9a-f]{40}\z') { throw 'Invalid package provenance' }
 if ([string]::IsNullOrEmpty($env:GH_TOKEN)) { throw 'Missing package publication token' }
 $reference = "ghcr.io/$($Repository.ToLowerInvariant()):$Version"
@@ -30,7 +33,7 @@ try {
     $env:GH_TOKEN | oras login ghcr.io --username $env:GITHUB_ACTOR --password-stdin --registry-config $registryConfig
     if ($LASTEXITCODE -ne 0) { throw 'GHCR login failed' }
     $layers = @("$($versionInfo.FileName):application/octet-stream", 'SHA256SUMS.txt:text/plain', 'build-info.txt:text/plain', 'provenance.txt:text/plain', 'THIRD_PARTY_NOTICES.txt:text/plain', 'release-evidence.json:application/json')
-    oras push --registry-config $registryConfig --artifact-type application/vnd.llvy.uploader.v1 --artifact-platform windows/amd64 --annotation "org.opencontainers.image.source=https://github.com/$Repository" --annotation "org.opencontainers.image.version=$Version" --annotation "org.opencontainers.image.revision=$Commit" --annotation 'org.opencontainers.image.description=Unsigned Windows uploader; reviewed acceptance included' $reference @layers
+    oras push --registry-config $registryConfig --artifact-type application/vnd.llvy.uploader.v1 --artifact-platform windows/amd64 --annotation "org.opencontainers.image.source=https://github.com/$Repository" --annotation "org.opencontainers.image.version=$Version" --annotation "org.opencontainers.image.revision=$Commit" --annotation "org.opencontainers.image.description=$description" $reference @layers
     if ($LASTEXITCODE -ne 0) { throw 'GHCR publication failed' }
     $digest = oras resolve --registry-config $registryConfig $reference
     if ($LASTEXITCODE -ne 0 -or $digest -cnotmatch '\Asha256:[0-9a-f]{64}\z') { throw 'Cannot resolve published package digest' }
@@ -50,7 +53,7 @@ Verified digest: $digest
 
 Download: oras pull $immutableReference
 
-Unsigned build; reviewed server and Windows acceptance is recorded in release-evidence.json.
+$description. Verification details are recorded in release-evidence.json.
 "@ | Add-Content $env:GITHUB_STEP_SUMMARY
     }
 } finally {

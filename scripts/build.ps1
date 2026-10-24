@@ -39,7 +39,7 @@ try {
     (Get-FileHash $exePath -Algorithm SHA256).Hash.ToLower() + '  ' + $versionInfo.FileName | Set-Content dist/SHA256SUMS.txt
     go version -m $exePath | Set-Content dist/build-info.txt
     if ($LASTEXITCODE -ne 0) { throw 'Build information extraction failed' }
-    $acceptance = if (Test-Path dist/release-evidence.json) { 'reviewed acceptance: release-evidence.json' } else { 'development build; real PC and external acceptance pending; publication blocked' }
+    $acceptance = if (-not (Test-Path dist/release-evidence.json)) { 'development build; real PC and external acceptance pending; publication blocked' } elseif ($env:RELEASE_CHANNEL -ceq 'prerelease') { 'test prerelease; real PC and external acceptance pending; see release-evidence.json' } else { 'reviewed acceptance: release-evidence.json' }
     "Version: $Version`nFile: $($versionInfo.FileName)`nSource: $sourceCommit`nServer origin: $serverOrigin`nUnconfigured self-test only: $([string]::IsNullOrEmpty($serverOrigin))`nStatus: unsigned; $acceptance" | Set-Content dist/provenance.txt
 } finally {
     Remove-Item $resourcePath -ErrorAction SilentlyContinue

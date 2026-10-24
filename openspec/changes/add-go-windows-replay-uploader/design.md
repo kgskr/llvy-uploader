@@ -205,3 +205,9 @@ Go와 런타임/빌드 도구의 고정 버전별 라이선스 원문, 계약 �
 ### 업로더 역할 확장
 
 앱 session 파서는 uploader/admin/owner를 허용하고 viewer/unknown은 거부한다. 업로더 권한의 생성·회수는 서버 관리자/오너만 수행한다. UI는 session의 계정명을 그대로 표시하며 역할을 admin으로 바꾸지 않는다. 원본 계약 commit 고정 → 앱 사본/hash 갱신 및 검사 → 호환 서버/앱 배포 → 실제 Windows 검증 → uploader 권한 활성화 순서를 따른다. 계약 원본은 로컬 `fe32e8a93a426b0446338d24c201c5b778dab682`로 고정했다. 원격 공개와 실제 검증 전에는 릴리스 호환 완료로 기록하지 않는다.
+
+### 테스트용 사전 릴리스 채널
+
+GitHub Release의 prerelease boolean에서 채널을 도출하며 버전 접미사와 일치해야 한다. `RELEASE_CHANNEL=prerelease`와 근거의 `channel=prerelease`가 모두 일치하는 사전 버전에서만 Windows 10/11·Discord·Blob·리플레이/웹 회귀·회수 항목을 pending으로 허용한다. 각 pending 항목도 검증 한계를 설명한 HTTPS 문서를 가리킨다. 서버 check·strict·PostgreSQL 경쟁은 passed가 필수이며 자동 Linux/Windows tests/race/vet, PE·self-test·내장 origin 검사는 모든 채널에 유지한다. 다른 채널·누락·failed·commit/계약/version/origin 불일치는 게시를 거부한다.
+
+정식 채널의 기본값과 모든 실환경 검증 passed 요구는 유지한다. 사전 릴리스 패키지의 provenance·OCI description·실행 요약과 공개 Release에는 미서명·실환경 검증 미완료 상태를 표시한다. 같은 검증 근거를 빌드와 게시 직전에 재검사하고 게시 digest를 다운로드해 전체 파일 해시를 비교한다. 사전 릴리스는 실제 PC 검증이나 아카이브 조건을 완료하지 않는다.

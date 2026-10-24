@@ -2,7 +2,7 @@
 
 LLVY에 리플레이를 올리는 Go 기반 Windows x64 포터블 프로그램이다.
 현재는 **서버 연동 개발 버전**이다. 파일 탐색·경기 ID 매칭, 브라우저 로그인·DPAPI 로그인 유지, 순차 전송·결과 복구와 Windows 빌드·CI 구성을 구현했다.
-기본 서버 주소는 없다. 다운로드용 빌드는 GitHub Actions 변수 `LLVY_SERVER_ORIGIN`의 HTTPS origin을 exe에 고정한다. 서버는 운영 배포 후 desktop API를 활성화했다. **실제 Windows/Blob/Discord 전체 수용 검증과 앱 릴리스는 남아 있다**. [서버 배포 기록](https://github.com/kgskr/llvy/blob/2b8491476d21cd1317a363243ee6fa60003f4d4c/docs/validation/2026-10-23-uploader-deployment.md)을 따른다.
+기본 서버 주소는 없다. 다운로드용 빌드는 GitHub Actions 변수 `LLVY_SERVER_ORIGIN`의 HTTPS origin을 exe에 고정한다. 서버는 운영 배포 후 desktop API를 활성화했다. **실제 Windows/Blob/Discord 전체 수용 검증과 정식 앱 릴리스는 남아 있다**. [서버 배포 기록](https://github.com/kgskr/llvy/blob/2b8491476d21cd1317a363243ee6fa60003f4d4c/docs/validation/2026-10-23-uploader-deployment.md)을 따른다.
 
 ## 현재 동작과 예정된 역할
 
@@ -52,7 +52,7 @@ Windows PowerShell에서 `LLVY_SERVER_ORIGIN` 환경변수를 지정한 뒤 `./s
 문서의 형제 경로 링크는 세 코드 저장소와 위키를 같은 상위 디렉토리에 배치했을 때 동작한다.
 배포 라이선스는 별도로 결정한다. 고정 의존성과 계약 사본의 권리 고지는 [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt)에 보존한다.
 
-[다운로드 빌드 workflow](.github/workflows/build-windows.yml)는 버전 Release가 `published`될 때만 검증된 exe·체크섬·출처를 GitHub Packages(GHCR)에 게시한다. `v1.2.3` 또는 `uploader-v1.2.3`의 파일명은 `llvy-uploader-1.2.3-windows-x64.exe`이며 패키지 tag는 `1.2.3`이다. 주소 변수가 없으면 빌드가 실패한다. 게시에는 정확한 앱·계약·서버 revision과 실제 Windows·외부 연동 검증을 담은 `LLVY_RELEASE_EVIDENCE_JSON`도 필요하며, 없으면 게시를 차단한다. [검증 근거 작성](docs/release/README.md)을 따른다. 설정·실행·다운로드 순서는 [개발 안내](docs/development.md#다운로드-빌드)를 따른다.
+[다운로드 빌드 workflow](.github/workflows/build-windows.yml)는 버전 Release가 `published`될 때만 검증된 exe·체크섬·출처를 GitHub Packages(GHCR)에 게시한다. `v1.2.3` 또는 `uploader-v1.2.3`의 파일명은 `llvy-uploader-1.2.3-windows-x64.exe`이며 패키지 tag는 `1.2.3`이다. 주소 변수가 없으면 빌드가 실패한다. 게시에는 정확한 앱·계약·서버 revision을 담은 `LLVY_RELEASE_EVIDENCE_JSON`이 필요하다. 정식 릴리스는 실제 Windows·외부 연동 검증 전체 통과를 요구한다. 명시적인 테스트용 사전 릴리스는 자동 검사 통과 후 외부 검증의 pending 상태와 근거를 패키지에 포함한다. [검증 근거 작성](docs/release/README.md)을 따른다. 설정·실행·다운로드 순서는 [개발 안내](docs/development.md#다운로드-빌드)를 따른다.
 
 클라우드 CI는 Linux에서 공통 테스트·race·vet·형식 검사를 먼저 실행하고 모두 성공하면 Windows 테스트·race·vet를 실행한다. 배포 exe 빌드·PE 검사·self-test·패키지 게시는 릴리스 workflow에서만 실행한다. macOS CI와 macOS 실행파일은 제공하지 않으며 Mac 공통 검사는 로컬 개발용이다.
 
@@ -61,3 +61,7 @@ Windows PowerShell에서 `LLVY_SERVER_ORIGIN` 환경변수를 지정한 뒤 `./s
 서버의 일반 사용자·업로더·관리자·서비스 오너 중 업로더부터 앱 연결과 업로드를 허용한다. 앱은 `uploader`, `admin`, `owner` session을 그대로 받아들이고 viewer와 알 수 없는 역할은 거부한다. 업로더 권한은 서버의 관리자 또는 오너가 부여·회수하며, 회수·관리자 승격 뒤에는 이전 기기 연결을 재사용하지 않고 다시 로그인해야 한다. 권한 관리 기능은 앱에 추가하지 않는다.
 
 업로더 역할 계약은 원본 commit `fe32e8a93a426b0446338d24c201c5b778dab682`로 고정하고 사본·SHA-256을 갱신했다. 이 commit은 LLVY의 원격 `uploader-role-contract` ref에 게시됐다. 기존 admin/owner 호환과 새 uploader fixture를 검사한다. [서버 변경](../llvy/openspec/changes/add-uploader-role/proposal.md)의 호환 서버/앱 배포 및 실제 Windows·Discord·Blob 검증 후에 uploader 계정을 활성화한다.
+
+## 테스트용 사전 릴리스
+
+`0.1.0-rc.1`은 새 uploader 권한과 예약·refresh 복구를 확인하기 위한 미서명 Windows x64 테스트 버전이다. 실제 Windows 10/11 사용자 환경 및 Discord·Blob 전체 수용 검증은 미완료다. [릴리스 페이지](https://github.com/kgskr/llvy-uploader/releases/tag/v0.1.0-rc.1)의 게시 workflow가 성공한 뒤 [GitHub Packages](https://github.com/kgskr/llvy-uploader/pkgs/container/llvy-uploader)에서 받을 수 있다. 다운로드와 검증은 [개발 안내](docs/development.md#다운로드-빌드)를 따른다. 서버 주소는 `https://www.llvy.my`로 고정하며 업로더·관리자·오너 계정이 필요하다.

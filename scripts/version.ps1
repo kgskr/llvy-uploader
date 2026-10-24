@@ -39,3 +39,10 @@ function New-UploaderVersionResource {
     $resource.RT_MANIFEST.'#1'.'0409'.description = 'LLVY Uploader'
     $resource | ConvertTo-Json -Depth 20 | Set-Content -Encoding utf8NoBOM $Destination
 }
+
+function Assert-UploaderReleaseChannel {
+    param([Parameter(Mandatory)][string]$Version, [Parameter(Mandatory)][string]$Channel)
+    $info = Get-UploaderVersion -Version $Version
+    if ($Channel -cnotin @('stable', 'prerelease')) { throw 'Unknown release channel' }
+    if (($Channel -ceq 'prerelease') -ne $info.Version.Contains('-')) { throw 'Release channel must match the version suffix' }
+}

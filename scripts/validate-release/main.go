@@ -24,6 +24,7 @@ type check struct {
 }
 type evidence struct {
 	SchemaVersion  int               `json:"schemaVersion"`
+	Channel        string            `json:"channel,omitempty"`
 	ClientCommit   string            `json:"clientCommit"`
 	Version        string            `json:"version"`
 	Origin         string            `json:"origin"`
@@ -40,6 +41,7 @@ type source struct {
 
 var requiredChecks = []string{"serverCheck", "serverOpenSpec", "postgresAuthorizationRace", "windows10", "windows11", "discordLogin", "blobPublicPrivate", "replayDuplicateBrowser", "revocation"}
 var commitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
+var prereleasePattern = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$`)
 
 func evidenceURL(raw string) bool {
 	u, err := url.Parse(raw)
@@ -51,6 +53,10 @@ func evidenceURL(raw string) bool {
 }
 
 func validate(raw []byte, version, commit, origin string, pinned source) (evidence, error) {
+	return validateForChannel(raw, version, commit, origin, pinned, "stable")
+}
+
+func validateForChannel(raw []byte, version, commit, origin string, pinned source, channel string) (evidence, error) {
 	var e evidence
 	if len(raw) == 0 || len(raw) > 64*1024 {
 		return e, errors.New("release evidence is missing or too large")
@@ -62,6 +68,20 @@ func validate(raw []byte, version, commit, origin string, pinned source) (eviden
 	}
 	if err := decoder.Decode(new(any)); err != io.EOF {
 		return e, errors.New("unexpected trailing evidence")
+	}
+	if channel == "" {
+		channel = "stable"
+	}
+	if channel != "stable" && channel != "prerelease" {
+		return e, errors.New("unknown release channel")
+	}
+	prerelease := channel == "prerelease"
+	if prerelease {
+		if e.Channel != "prerelease" || !prereleasePattern.MatchString(version) {
+			return e, errors.New("prerelease evidence and version suffix required")
+		}
+	} else if (e.Channel != "" && e.Channel != "stable") || strings.Contains(version, "-") {
+		return e, errors.New("stable release channel mismatch")
 	}
 	if err := desktop.ValidateOrigin(origin, false); err != nil {
 		return e, errors.New("invalid release origin")
@@ -83,10 +103,11 @@ func validate(raw []byte, version, commit, origin string, pinned source) (eviden
 	if len(e.Checks) != len(requiredChecks) {
 		return e, errors.New("all acceptance checks are required")
 	}
-	for _, name := range requiredChecks {
+	for i, name := range requiredChecks {
 		c := e.Checks[name]
-		if c.Status != "passed" || !evidenceURL(c.EvidenceURL) {
-			return e, fmt.Errorf("passing acceptance evidence required: %s", name)
+		pendingAllowed := prerelease && i >= 3 && c.Status == "pending"
+		if (c.Status != "passed" && !pendingAllowed) || !evidenceURL(c.EvidenceURL) {
+			return e, fmt.Errorf("acceptance evidence required: %s", name)
 		}
 	}
 	return e, nil
@@ -125,7 +146,7 @@ func run() error {
 			return errors.New("pinned contract bytes mismatch")
 		}
 	}
-	e, err := validate(raw, os.Getenv("RELEASE_VERSION"), os.Getenv("SOURCE_COMMIT"), os.Getenv("LLVY_SERVER_ORIGIN"), pinned)
+	e, err := validateForChannel(raw, os.Getenv("RELEASE_VERSION"), os.Getenv("SOURCE_COMMIT"), os.Getenv("LLVY_SERVER_ORIGIN"), pinned, os.Getenv("RELEASE_CHANNEL"))
 	if err != nil {
 		return err
 	}
