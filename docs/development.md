@@ -54,7 +54,7 @@ push·pull request·수동 실행에서 Linux 공통 테스트·race·vet·gofmt
 일반 검사는 read 권한과 `pull_request`를 사용하며 배포 exe를 만들지 않는다. 양쪽 OS에서 버전 파싱·파일명·리소스 생성·PowerShell 문법도 검사한다. 릴리스 workflow는 `release.published`에서만 Windows exe 빌드·PE 검사·self-test·내장 주소 검사를 거쳐 GHCR에 게시한다. 버전 Release 자체는 workflow가 생성하지 않는다.
 
 정식 릴리스에는 서버 원본 계약의 commit·체크섬과 호환 서버 검증, Windows 10/11 일반 사용자·한국어 IME·DPI·OneDrive·실제 LoL 경로, Discord·Blob·ROFL 통합 검증이 필요하다.
-릴리스 게시 권한/태그 보호, 아이콘, 의존성 라이선스 묶음과 서명 상태는 별도로 확정한다. 프로젝트 라이선스는 기존 LLVY에서 자동 상속하지 않는다.
+고정 의존성 라이선스 묶음은 [THIRD_PARTY_NOTICES.txt](../THIRD_PARTY_NOTICES.txt)에 있다. 릴리스 게시 권한/태그 보호, 아이콘과 서명 상태는 별도로 확정한다. 프로젝트 라이선스는 기존 LLVY에서 자동 상속하지 않는다.
 
 ## 근거
 
@@ -78,9 +78,9 @@ go build -tags development -ldflags "-H windowsgui -X llvy-uploader/internal/des
 ## 다운로드 빌드
 
 1. 저장소 Settings → Secrets and variables → Actions → Variables에 `LLVY_SERVER_ORIGIN`을 등록한다. 값은 실제 서버의 HTTPS origin이며 exe와 출처 정보에 포함된다.
-2. 빌드할 commit의 버전 태그로 GitHub Release를 **Publish release**한다. `v1.2.3` 또는 `uploader-v1.2.3`, `v1.2.3-rc.1`을 지원한다. draft 저장·tag/push·수동 일반 검사는 배포 빌드를 실행하지 않는다. 버전 숫자는 Windows 리소스 범위 0–65535이며 선행 0, `+build` 메타데이터와 경로/공백은 허용하지 않는다.
-3. **Publish Windows package**가 Linux 공통 검사 → Windows tests/race/vet → exe 빌드·PE·self-test·내장 주소 검사를 수행한다. `LLVY_SERVER_ORIGIN`이 없거나 검사가 실패하면 게시하지 않는다.
-4. 통과하면 GitHub Packages의 `ghcr.io/<owner>/llvy-uploader:1.2.3`에 OCI 파일 패키지를 저장한다. 파일은 `llvy-uploader-1.2.3-windows-x64.exe`, `SHA256SUMS.txt`, `build-info.txt`, `provenance.txt`다. 해시는 검증/출처 정보에 보존하고 파일명에는 버전을 쓴다.
+2. [검증 근거](release/README.md)를 실제 검증으로 채우고 `LLVY_RELEASE_EVIDENCE_JSON` 저장소 변수에 등록한다. 근거는 정확한 앱 commit·버전·origin에 묶인다. 예시나 pending 기록은 통과하지 않는다. 빌드할 commit의 버전 태그로 GitHub Release를 **Publish release**한다. `v1.2.3` 또는 `uploader-v1.2.3`, `v1.2.3-rc.1`을 지원한다. draft 저장·tag/push·수동 일반 검사는 배포 빌드를 실행하지 않는다. 버전 숫자는 Windows 리소스 범위 0–65535이며 선행 0, `+build` 메타데이터와 경로/공백은 허용하지 않는다.
+3. **Publish Windows package**가 Linux 공통 검사 → Windows tests/race/vet → exe 빌드·PE·self-test·내장 주소 검사를 수행한다. `LLVY_SERVER_ORIGIN` 또는 일치하는 수용 검증 근거가 없거나 검사가 실패하면 게시하지 않는다.
+4. 통과하면 GitHub Packages의 `ghcr.io/<owner>/llvy-uploader:1.2.3`에 OCI 파일 패키지를 저장한다. 파일은 `llvy-uploader-1.2.3-windows-x64.exe`, `SHA256SUMS.txt`, `build-info.txt`, `provenance.txt`, `THIRD_PARTY_NOTICES.txt`, `release-evidence.json`이다. 해시는 검증/출처 정보에 보존하고 파일명에는 버전을 쓴다.
 5. 게시 단계는 ORAS v1.3.5를 사용하며 `GITHUB_TOKEN`과 해당 job의 `packages: write`로 인증한다. 저장소 source annotation을 포함하고 게시한 digest를 다시 다운로드해 모든 파일의 SHA-256을 대조한다. 실행 요약에서 package reference와 검증된 digest를 확인한다.
 
 [ORAS](https://oras.land/docs/installation/)를 설치한 뒤 다음처럼 내려받는다. `<owner>`는 해당 저장소 소유자로 바꾼다.
@@ -98,3 +98,7 @@ Get-Content ./download/provenance.txt
 
 - [ORAS의 GHCR 파일 게시](https://oras.land/docs/1.2/how_to_guides/remote_registries/)
 - [GitHub Container registry 인증·저장소 연결·공개 범위](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+
+## 업로더 역할 검사
+
+`go test ./internal/desktop -run TestSessionRoles`는 uploader/admin/owner session 허용과 viewer/unknown 거부를 확인한다. Go 전체 test/vet/race와 Windows amd64 교차 빌드를 확인했다. 새 uploader 서버 계약은 로컬 commit과 사본/hash를 고정했다. 원격 공개 및 실제 Windows·외부 검증은 [호환 상태](../README.md#업로더-역할-호환)의 미완료 조건이다.

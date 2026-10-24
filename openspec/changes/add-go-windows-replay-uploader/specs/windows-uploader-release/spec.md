@@ -29,7 +29,7 @@ The release workflow SHALL require Go tests/static checks, shared API fixture co
 
 ### Requirement: Releases distribute one exe with traceable verification
 
-A protected release workflow SHALL publish the verified exe, SHA-256 checksum, dependency/license information and source commit provenance through GitHub Packages (GHCR) as an OCI file artifact after a GitHub Release is published. The distribution workflow SHALL listen only to `release.published`, validate the release tag and build that tag. Executable filenames, embedded application/resource versions and package tags SHALL use the normalized release version, not the commit hash; provenance SHALL retain the full source commit. Package write permission SHALL be limited to the release build/publish job. It SHALL pull the published digest and verify the downloaded checksums before declaring publication successful. Dependency/license completeness and real-PC acceptance SHALL remain explicit pending gates for the current unsigned development build. Application binaries SHALL not be committed to Git. The workflow SHALL inspect non-system DLL/runtime dependencies and SHALL not rely on Node.js/WebView2 or developer toolchains installed on the runner. Fork/PR jobs SHALL not receive production or signing credentials. Signing status SHALL be accurately disclosed and SmartScreen suppression SHALL not be guaranteed.
+A protected release workflow SHALL publish the verified exe, SHA-256 checksum, dependency/license information and source commit provenance through GitHub Packages (GHCR) as an OCI file artifact after a GitHub Release is published. The distribution workflow SHALL listen only to `release.published`, validate the release tag and build that tag. Executable filenames, embedded application/resource versions and package tags SHALL use the normalized release version, not the commit hash; provenance SHALL retain the full source commit. Package write permission SHALL be limited to the release build/publish job. It SHALL pull the published digest and verify the downloaded checksums before declaring publication successful. Dependency/license notices SHALL be bundled. Real-PC acceptance SHALL remain pending until actual evidence is available and SHALL block publication. Application binaries SHALL not be committed to Git. The workflow SHALL inspect non-system DLL/runtime dependencies and SHALL not rely on Node.js/WebView2 or developer toolchains installed on the runner. Fork/PR jobs SHALL not receive production or signing credentials. Signing status SHALL be accurately disclosed and SmartScreen suppression SHALL not be guaranteed.
 
 #### Scenario: Release artifact cannot run without a developer dependency
 
@@ -76,7 +76,7 @@ Production builds SHALL have no default server address and SHALL embed an explic
 #### Scenario: Publish a configured version
 
 - **WHEN** a release such as `v1.2.3` is published and Linux then Windows checks, origin validation, PE inspection and bounded self-test pass
-- **THEN** the workflow publishes `llvy-uploader-1.2.3-windows-x64.exe`, SHA-256 and build provenance in the GHCR package tagged `1.2.3`, labeled unsigned with external acceptance pending
+- **THEN** the workflow publishes `llvy-uploader-1.2.3-windows-x64.exe`, SHA-256 and build provenance in the GHCR package tagged `1.2.3`, labeled unsigned with verified acceptance evidence
 
 #### Scenario: Push code or a tag without publishing a release
 
@@ -92,3 +92,12 @@ Production builds SHALL have no default server address and SHALL embed an explic
 
 - **WHEN** the Linux test, race, vet or formatting gate fails or is canceled
 - **THEN** the dependent Windows test/build job does not run and no downloadable artifact is published
+
+### Requirement: Publication requires commit-bound acceptance evidence
+
+Publication SHALL validate a reviewed evidence record with the exact client commit, version, configured origin, pinned contract source commit and checksums, compatible deployed server commit, and HTTPS evidence references for passing server checks, strict specs, PostgreSQL authorization races, Windows 10/11 ordinary-user execution, Discord login, Blob transfer, real replay/duplicate/browser regression and revocation. Missing, failed or mismatched evidence SHALL stop publication. Build and publication SHALL include the validated record and dependency/license notices in the downloaded package. Ordinary builds SHALL remain possible without publication evidence.
+
+#### Scenario: Release has no external acceptance record
+
+- **WHEN** a release is published without complete matching evidence
+- **THEN** its workflow fails before uploading any executable to the registry

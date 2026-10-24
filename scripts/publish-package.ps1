@@ -11,16 +11,26 @@ if ([string]::IsNullOrEmpty($env:GH_TOKEN)) { throw 'Missing package publication
 $reference = "ghcr.io/$($Repository.ToLowerInvariant()):$Version"
 $registryConfig = Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString() + '.json')
 $download = Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
+Push-Location (Split-Path $PSScriptRoot -Parent)
+try {
+    $env:RELEASE_VERSION = $Version
+    $env:SOURCE_COMMIT = $Commit
+    go run ./scripts/validate-release dist/release-evidence.json
+    if ($LASTEXITCODE -ne 0) { throw 'Release acceptance evidence failed' }
+    if ((Get-FileHash THIRD_PARTY_NOTICES.txt).Hash -cne (Get-FileHash dist/THIRD_PARTY_NOTICES.txt).Hash) { throw 'Dependency notices mismatch' }
+    $provenance = Get-Content dist/provenance.txt
+    if ($provenance -cnotcontains "Source: $Commit" -or $provenance -cnotcontains "Version: $Version" -or $provenance -cnotcontains "Server origin: $env:LLVY_SERVER_ORIGIN") { throw 'Build provenance mismatch' }
+} finally { Pop-Location }
 Push-Location (Join-Path $PSScriptRoot '../dist')
 try {
-    $files = @($versionInfo.FileName, 'SHA256SUMS.txt', 'build-info.txt', 'provenance.txt')
+    $files = @($versionInfo.FileName, 'SHA256SUMS.txt', 'build-info.txt', 'provenance.txt', 'THIRD_PARTY_NOTICES.txt', 'release-evidence.json')
     foreach ($file in $files) { if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing package file: $file" } }
     $checksum = (Get-FileHash $versionInfo.FileName -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + $versionInfo.FileName
     if ((Get-Content -Raw SHA256SUMS.txt).TrimEnd() -cne $checksum) { throw 'Executable checksum mismatch before publication' }
     $env:GH_TOKEN | oras login ghcr.io --username $env:GITHUB_ACTOR --password-stdin --registry-config $registryConfig
     if ($LASTEXITCODE -ne 0) { throw 'GHCR login failed' }
-    $layers = @("$($versionInfo.FileName):application/octet-stream", 'SHA256SUMS.txt:text/plain', 'build-info.txt:text/plain', 'provenance.txt:text/plain')
-    oras push --registry-config $registryConfig --artifact-type application/vnd.llvy.uploader.v1 --artifact-platform windows/amd64 --annotation "org.opencontainers.image.source=https://github.com/$Repository" --annotation "org.opencontainers.image.version=$Version" --annotation "org.opencontainers.image.revision=$Commit" --annotation 'org.opencontainers.image.description=Unsigned Windows uploader; real PC and external acceptance pending' $reference @layers
+    $layers = @("$($versionInfo.FileName):application/octet-stream", 'SHA256SUMS.txt:text/plain', 'build-info.txt:text/plain', 'provenance.txt:text/plain', 'THIRD_PARTY_NOTICES.txt:text/plain', 'release-evidence.json:application/json')
+    oras push --registry-config $registryConfig --artifact-type application/vnd.llvy.uploader.v1 --artifact-platform windows/amd64 --annotation "org.opencontainers.image.source=https://github.com/$Repository" --annotation "org.opencontainers.image.version=$Version" --annotation "org.opencontainers.image.revision=$Commit" --annotation 'org.opencontainers.image.description=Unsigned Windows uploader; reviewed acceptance included' $reference @layers
     if ($LASTEXITCODE -ne 0) { throw 'GHCR publication failed' }
     $digest = oras resolve --registry-config $registryConfig $reference
     if ($LASTEXITCODE -ne 0 -or $digest -cnotmatch '\Asha256:[0-9a-f]{64}\z') { throw 'Cannot resolve published package digest' }
@@ -40,7 +50,7 @@ Verified digest: $digest
 
 Download: oras pull $immutableReference
 
-Unsigned development build; real Windows PC, Blob and Discord acceptance remain pending.
+Unsigned build; reviewed server and Windows acceptance is recorded in release-evidence.json.
 "@ | Add-Content $env:GITHUB_STEP_SUMMARY
     }
 } finally {

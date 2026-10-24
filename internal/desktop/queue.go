@@ -24,15 +24,25 @@ type Progress func(entry *Entry, stage string, sent, total int64)
 
 func NewEntry(file discovery.File) *Entry { return &Entry{File: file, Key: Random()} }
 
-// SelectEntry refreshes an unreserved selection, but never changes an uncertain
+// SelectEntry is called for an explicit upload action. It refreshes an unreserved
+// or successfully completed selection, but never changes an uncertain
 // reservation's key or metadata after a request might have reached the server.
 func SelectEntry(entries map[string]*Entry, file discovery.File) *Entry {
 	e := entries[file.Path]
-	if e == nil || e.NeedsReservation() && (e.File.Name != file.Name || e.File.Size != file.Size || !e.File.ModTime.Equal(file.ModTime) || e.File.Problem != file.Problem) {
+	if e == nil || (e.NeedsReservation() || e.Succeeded()) && !SameFile(e.File, file) {
 		e = NewEntry(file)
 		entries[file.Path] = e
 	}
 	return e
+}
+
+// SameFile compares discovery metadata, without reading replay contents.
+func SameFile(a, b discovery.File) bool {
+	return a.Path == b.Path && a.Name == b.Name && a.Size == b.Size && a.ModTime.Equal(b.ModTime) && a.Problem == b.Problem
+}
+
+func (e *Entry) Succeeded() bool {
+	return e.Result.State == "completed" || e.Result.State == "duplicate"
 }
 
 func (e *Entry) NeedsReservation() bool {
@@ -74,8 +84,52 @@ func (c *Client) Upload(ctx context.Context, e *Entry, notify Progress) error {
 	if e.Result.State == "completed" || e.Result.State == "duplicate" {
 		return nil
 	}
-	// Recover a known result without reopening or changing the original file.
-	if e.Binding.UploadID != "" {
+	// Local bytes are needed only for a new reservation or confirmed absence.
+	// In particular, lost reservation responses retain their original metadata.
+	var handle *replay.Handle
+	defer func() {
+		if handle != nil {
+			handle.Close()
+		}
+	}()
+	openOriginal := func() error {
+		if handle != nil {
+			return nil
+		}
+		emit("파일 확인", 0, e.File.Size)
+		var err error
+		handle, err = replay.Open(e.File)
+		if err != nil {
+			return err
+		}
+		hash, err := handle.Hash(ctx)
+		if err != nil {
+			return err
+		}
+		metadata := Metadata{Filename: e.File.Name, Size: e.File.Size, LastModified: e.File.ModTime.UnixMilli(), SHA256: hash}
+		if e.Metadata.Filename != "" && e.Metadata != metadata {
+			return replay.ErrChanged
+		}
+		e.Metadata = metadata
+		return nil
+	}
+	fresh := e.NeedsReservation()
+	if fresh {
+		if err := openOriginal(); err != nil {
+			return err
+		}
+	}
+	if e.Binding.UploadID == "" {
+		emit("예약", 0, e.File.Size)
+		e.ReservationAttempted = true
+		e.DeviceSessionID = deviceID
+		binding, err := c.Reserve(ctx, e.Metadata, e.Key)
+		if err != nil {
+			return err
+		}
+		e.Binding = binding
+	}
+	if !fresh {
 		result, err := c.Status(ctx, e.Binding.UploadID)
 		if err != nil {
 			return err
@@ -85,31 +139,6 @@ func (c *Client) Upload(ctx context.Context, e *Entry, notify Progress) error {
 			return resultError(result)
 		}
 	}
-	emit("파일 확인", 0, e.File.Size)
-	handle, err := replay.Open(e.File)
-	if err != nil {
-		return err
-	}
-	defer handle.Close()
-	hash, err := handle.Hash(ctx)
-	if err != nil {
-		return err
-	}
-	metadata := Metadata{Filename: e.File.Name, Size: e.File.Size, LastModified: e.File.ModTime.UnixMilli(), SHA256: hash}
-	if e.Metadata.Filename != "" && e.Metadata != metadata {
-		return replay.ErrChanged
-	}
-	e.Metadata = metadata
-	fresh := e.Binding.UploadID == ""
-	if fresh {
-		emit("예약", 0, e.File.Size)
-		e.ReservationAttempted = true
-		e.DeviceSessionID = deviceID
-		e.Binding, err = c.Reserve(ctx, metadata, e.Key)
-		if err != nil {
-			return err
-		}
-	}
 	// A previous/uncertain transfer is always probed through process first.
 	shouldPut := fresh
 	for attempt := 0; attempt < 3; attempt++ {
@@ -117,6 +146,9 @@ func (c *Client) Upload(ctx context.Context, e *Entry, notify Progress) error {
 			return err
 		}
 		if shouldPut {
+			if err := openOriginal(); err != nil {
+				return err
+			}
 			if err := handle.Check(); err != nil {
 				return err
 			}
@@ -158,7 +190,7 @@ func (c *Client) Upload(ctx context.Context, e *Entry, notify Progress) error {
 		}
 		status, statusErr := c.Status(ctx, e.Binding.UploadID)
 		if statusErr != nil {
-			return err
+			return statusErr
 		}
 		e.Result = status
 		if status.State != "pending" {
@@ -168,12 +200,37 @@ func (c *Client) Upload(ctx context.Context, e *Entry, notify Progress) error {
 	}
 	return errors.New("결과 불명확 — 같은 예약의 상태를 다시 확인하세요")
 }
+
+// terminalResultError records a confirmed server result, not a stale Entry.Result
+// observed before a network, authentication or storage failure.
+type terminalResultError struct {
+	result Result
+}
+
+func (e *terminalResultError) Error() string {
+	if e.result.State == "failed" {
+		return "처리 실패: " + e.result.ErrorCode
+	}
+	return "결과 불명확 — 기존 경기와 예약 상태를 확인하세요"
+}
+
+// NewAttemptAllowed only identifies outcomes eligible for explicit user consent.
+// It never authorizes an automatic replacement or treats uncertain I/O as expiry.
+func NewAttemptAllowed(err error) bool {
+	var terminal *terminalResultError
+	if errors.As(err, &terminal) {
+		return terminal.result.State == "failed" || terminal.result.State == "outcome_unknown"
+	}
+	var api *APIError
+	return errors.As(err, &api) && api.Status == 409 && api.Code == "reservation_expired"
+}
+
 func resultError(r Result) error {
 	switch r.State {
 	case "completed", "duplicate":
 		return nil
-	case "failed":
-		return errors.New("처리 실패: " + r.ErrorCode)
+	case "failed", "outcome_unknown":
+		return &terminalResultError{result: r}
 	case "processing":
 		return errors.New("서버 처리 중 — 상태를 다시 확인하세요")
 	default:

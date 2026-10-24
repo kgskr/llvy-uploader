@@ -118,6 +118,16 @@ Before upload, the UI SHALL display selected file count beside the minimum accou
 - **WHEN** the user selects eleven files and the latest account/global snapshot permits ten reservations
 - **THEN** the UI shows both counts and the partial-batch warning before starting, and explains that duplicates also consume a created reservation; any later 429 pauses remaining work and refreshes the displayed allowance
 
+#### Scenario: A completed path now contains a changed file
+
+- **WHEN** a new user search observes different name, size or modification time at a completed or duplicate file path
+- **THEN** the UI identifies a changed candidate instead of attaching the old success or game link, and only a subsequent explicit upload action replaces the completed entry with a new reservation candidate; uncertain reservations retain their original identity
+
+#### Scenario: Quota and rate-limit waiting information is available
+
+- **WHEN** a session snapshot has account/global reset times or a 429 response has Retry-After
+- **THEN** the UI shows both reset times before upload and when a fresh retry is quota-blocked, describes null reset times as inactive windows, and shows the rounded-up retry delay without automatically restarting reservations
+
 ### Requirement: Local state is explicit and removable
 
 The client SHALL store configuration and bounded redacted logs in origin-separated storage under `%LOCALAPPDATA%/LLVY/Uploader/`, provide local-data removal, and preserve original replay files. Removal SHALL NOT delete the held single-instance lock. Login persistence SHALL be opt-in and follow the desktop authorization specification. The initial release SHALL NOT automatically restore or run a queue after restart.
@@ -126,6 +136,11 @@ The client SHALL store configuration and bounded redacted logs in origin-separat
 
 - **WHEN** the exe is moved to another directory on the same machine
 - **THEN** its user-local configuration remains available without writing next to the executable
+
+#### Scenario: Diagnostics rotate without retaining identifying data
+
+- **WHEN** diagnostic events exceed the active log's 256 KiB limit
+- **THEN** the client retains at most two 256 KiB JSONL files containing UTC time, allowlisted event/outcome/error categories and an optional HTTP status only, rejects arbitrary values, and removes both files during local-data removal while preserving the held instance lock
 
 ### Requirement: Retry eligibility preserves reservation identity
 
@@ -158,3 +173,26 @@ Cancellation SHALL discard automatic discovery and file-search selection results
 
 - **WHEN** discovery ends with no candidates after cancellation
 - **THEN** the existing selection stays visible and no automatic folder picker opens
+
+### Requirement: Recovery precedes local file access
+
+The client SHALL recover an attempted reservation with its original key and metadata and check a known pending reservation through the process API before opening the local file. Only a confirmed `object_not_uploaded` response SHALL allow retransmission after local metadata and hash validation. Storage errors SHALL NOT imply object absence.
+
+#### Scenario: Original file is unavailable after PUT
+
+- **WHEN** PUT reached storage but its response was lost and the original file is moved, changed or unavailable before retry
+- **THEN** the client can finish processing the stored object without opening the original file or issuing another PUT
+
+### Requirement: New attempts require explicit quota consent
+
+The failed-item retry action SHALL first recover the existing reservation. Only a confirmed failed result, reservation expiry or outcome_unknown SHALL offer a new attempt with a warning about consuming another reservation and possible duplicates. The UI SHALL default to cancellation and preserve the existing entry unless the user confirms and the current device, result and quota permit a new attempt. Authentication, network and storage uncertainty SHALL NOT authorize replacement. Ordinary upload and automatic retries SHALL retain the original identity.
+
+#### Scenario: User confirms a new attempt after terminal failure
+
+- **WHEN** a failed item is retried and the user confirms the quota warning
+- **THEN** the client rechecks the original result and current quota and uses a new key only if it is still eligible, retaining the original entry when confirmation is declined or recovery succeeds
+
+#### Scenario: Retry confirmation is canceled or its device changes
+
+- **WHEN** the operation is canceled or its device changes before the confirmation is applied
+- **THEN** no new reservation is created and no stale confirmation is applied to another device

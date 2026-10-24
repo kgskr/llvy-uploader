@@ -9,18 +9,17 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 )
-
-// PreviewNamespace separates this offline preview from future product origins.
-// Production origin must be fixed after the server-owned contract is available.
-const PreviewNamespace = "llvy-uploader:offline-preview:v1"
 
 type Config struct {
 	ReplayFolder string `json:"replayFolder"`
 }
 type Store struct {
-	dir  string
-	lock io.Closer
+	dir    string
+	lock   io.Closer
+	mu     sync.Mutex
+	closed bool
 }
 
 func OpenStore(base, origin string) (*Store, error) {
@@ -33,9 +32,17 @@ func OpenStore(base, origin string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Store{dir, lock}, nil
+	return &Store{dir: dir, lock: lock}, nil
 }
-func (s *Store) Close() error { return s.lock.Close() }
+func (s *Store) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return nil
+	}
+	s.closed = true
+	return s.lock.Close()
+}
 func (s *Store) Load() (Config, error) {
 	f, err := os.Open(filepath.Join(s.dir, "config.json"))
 	if errors.Is(err, os.ErrNotExist) {
@@ -67,7 +74,12 @@ func (s *Store) Save(c Config) error {
 
 // Clear removes only app-owned data, preserving the held instance lock.
 func (s *Store) Clear() error {
-	for _, name := range []string{"config.json", "refresh.bin"} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return os.ErrClosed
+	}
+	for _, name := range []string{"config.json", "refresh.bin", diagnosticName, previousDiagnosticName} {
 		if err := os.Remove(filepath.Join(s.dir, name)); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}

@@ -14,6 +14,20 @@ The client SHALL follow the LLVY-owned desktop-device-authorization contract for
 - **WHEN** the client cannot establish whether its refresh succeeded
 - **THEN** it pauses authorized work and requests login without replaying the old credential
 
+### Requirement: Definitive refresh throttling preserves the connection
+
+On a parsed HTTP 429 with code rate_limited from refresh, the client SHALL retain its current in-memory and persisted credentials and return the original API error including Retry-After. It SHALL NOT automatically retry that rejection or discard same-device reservation identity. Other refresh failures, including uncertain or malformed responses, SHALL continue to require login without replaying the old token. Startup restoration SHALL report a throttled refresh without immediately retrying through session lookup; a subsequent explicit login action SHALL retry the retained credential even before its device ID is known.
+
+#### Scenario: Connected device is throttled during refresh
+
+- **WHEN** refresh is rejected with HTTP 429 rate_limited before rotation
+- **THEN** the client keeps credentials and queued reservation ownership, reports the retry delay, and can later refresh the same device
+
+#### Scenario: Saved credential restoration is throttled
+
+- **WHEN** the first refresh after loading a saved token receives HTTP 429 rate_limited
+- **THEN** the token remains saved and the next explicit connection attempt retries it without opening another browser approval
+
 ### Requirement: Login persistence protects only LLVY credentials in user storage
 
 The client SHALL default `로그인 유지` to off. Without it, credentials SHALL remain in memory, and normal exit SHALL attempt own-session revocation for at most two seconds before clearing them. Failure SHALL be reported without blocking exit indefinitely; crash/offline orphans SHALL be bounded by the transient lifetime and recoverable through explicit browser-approved transient replacement. With persistence, only the refresh credential SHALL be stored using non-interactive Windows user-scope DPAPI in origin-separated user-local storage; the access token and PKCE verifier SHALL remain in memory. Credential reads and atomic file replacement SHALL occur only while holding the per-user/origin single-instance lock. Failure to decrypt or save a newly rotated credential SHALL require login rather than plaintext fallback or reuse of an older generation. No Discord tokens, bot tokens, OAuth client secret or Blob store credentials SHALL be delivered to the exe.
@@ -55,3 +69,17 @@ The UI SHALL synchronize the locally retained device ID after every completed or
 
 - **WHEN** login saves credentials but session lookup is canceled
 - **THEN** the UI shows connection information awaiting verification and the next login action retries lookup on the same device
+
+### Requirement: Client accepts upload-capable roles without management delegation
+
+The session parser SHALL accept uploader, admin and owner without rewriting the role and SHALL reject viewer or unknown roles. The client SHALL not expose grant management. After uploader revocation or promotion it SHALL require a new connection when the server rejects the prior credentials. The updated server contract SHALL be pinned by commit and checksum before releasing uploader support.
+
+#### Scenario: Session identifies an uploader
+
+- **WHEN** the server returns a valid desktop session with role uploader
+- **THEN** the client accepts the session and retains uploader as the role
+
+#### Scenario: Session identifies a viewer
+
+- **WHEN** the server returns a desktop session with role viewer or an unknown role
+- **THEN** the client rejects it as a contract error

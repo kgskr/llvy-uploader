@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"golang.org/x/sys/windows"
 	"llvy-uploader/internal/app"
@@ -42,8 +43,10 @@ type window struct {
 	client           *desktop.Client
 	session          *desktop.Session
 	deviceID         string
+	hasCredentials   bool
 	entries          map[string]*desktop.Entry
 	states           map[string]string
+	completedFiles   map[string]discovery.File
 	hwnd, font       uintptr
 	controls         map[int]uintptr
 	positions        []control
@@ -57,6 +60,7 @@ type window struct {
 	wg               sync.WaitGroup
 	updates          chan update
 	busy             bool
+	workCanceled     bool
 	dpi              int
 	scrollX, scrollY int
 }
@@ -83,6 +87,7 @@ func Run(version, commit string) error {
 		return err
 	}
 	defer store.Close()
+	recordResult(store, platform.EventStartup, nil)
 	client, err := desktop.New(origin, development, store)
 	if err != nil {
 		return err
@@ -90,7 +95,7 @@ func Run(version, commit string) error {
 	config, configErr := store.Load()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	w := &window{client: client, entries: map[string]*desktop.Entry{}, states: map[string]string{}, store: store, controls: map[int]uintptr{}, ctx: ctx, cancel: cancel, updates: make(chan update, 1), dpi: int(proc("GetDpiForSystem"))}
+	w := &window{client: client, entries: map[string]*desktop.Entry{}, states: map[string]string{}, completedFiles: map[string]discovery.File{}, store: store, controls: map[int]uintptr{}, ctx: ctx, cancel: cancel, updates: make(chan update, 1), dpi: int(proc("GetDpiForSystem"))}
 	if w.dpi == 0 {
 		w.dpi = 96
 	}
@@ -142,7 +147,9 @@ func Run(version, commit string) error {
 	cancel()
 	w.wg.Wait()
 	closeCtx, closeCancel := context.WithTimeout(context.Background(), 2*time.Second)
-	if err := client.Close(closeCtx); err != nil {
+	closeErr := client.Close(closeCtx)
+	recordResult(store, platform.EventShutdown, closeErr)
+	if err := closeErr; err != nil {
 		Alert(err.Error())
 	}
 	closeCancel()
@@ -187,17 +194,17 @@ func (w *window) createControls() {
 	w.add(idResults, "LISTBOX", "", 0x00b10101, 16, 244, 994, 246)
 	w.add(idChoose, "BUTTON", "선택한 후보 사용", 0x10000, 16, 502, 180, 32)
 	w.add(idClear, "BUTTON", "로컬 기록 삭제", 0x10000, 210, 502, 170, 32)
-	w.add(4, "STATIC", "", 0, 400, 504, 610, 28)
-	w.add(5, "EDIT", "LLVY 로그인 후 선택한 파일을 업로드할 수 있습니다. 중복·실패도 예약 한도를 사용합니다.", 0x00a10844, 16, 548, 994, 72)
+	w.add(4, "STATIC", "", 0, 16, 540, 994, 52)
+	w.add(5, "EDIT", "LLVY 로그인 후 선택한 파일을 업로드할 수 있습니다. 중복·실패도 예약 한도를 사용합니다.", 0x00a10844, 16, 596, 994, 72)
 	for i, label := range []string{"LLVY 로그인", "로그인 유지", "업로드", "실패 항목 다시 시도"} {
 		style := uint32(0x10000)
 		if i == 1 {
 			style |= 3
 		}
-		h := w.add(200+i, "BUTTON", label, style, 16+i*220, 632, 205, 32)
+		h := w.add(200+i, "BUTTON", label, style, 16+i*220, 680, 205, 32)
 		proc("EnableWindow", h, 1)
 	}
-	w.add(204, "BUTTON", "로그아웃", 0x10000, 896, 632, 114, 32)
+	w.add(204, "BUTTON", "로그아웃", 0x10000, 896, 680, 114, 32)
 	proc("EnableWindow", w.controls[idCancel], 0)
 }
 func (w *window) callback(hwnd uintptr, message uint32, wp, lp uintptr) uintptr {
@@ -243,9 +250,16 @@ func (w *window) callback(hwnd uintptr, message uint32, wp, lp uintptr) uintptr 
 	case wmDone:
 		select {
 		case result := <-w.updates:
+			if !result.ongoing && w.workCanceled {
+				result = suppressCanceledNavigation(result)
+			}
+			if result.replacement != nil {
+				w.entries[result.replacement.File.Path] = result.replacement
+			}
 			result = reconcileEntries(w.entries, result)
 			if result.authChecked {
 				w.deviceID = result.deviceID
+				w.hasCredentials = result.hasCredentials
 				if w.session != nil && w.session.DeviceSessionID != result.deviceID {
 					w.session = nil
 				}
@@ -256,9 +270,15 @@ func (w *window) callback(hwnd uintptr, message uint32, wp, lp uintptr) uintptr 
 			if result.clearEntries {
 				w.entries = map[string]*desktop.Entry{}
 				w.states = map[string]string{}
+				w.completedFiles = map[string]discovery.File{}
 			}
 			if result.queueDone {
 				for path, e := range w.entries {
+					if e.Succeeded() {
+						w.completedFiles[path] = e.File
+					} else {
+						delete(w.completedFiles, path)
+					}
 					if e.Message != "" {
 						w.states[path] = e.Message
 					}
@@ -292,6 +312,9 @@ func (w *window) callback(hwnd uintptr, message uint32, wp, lp uintptr) uintptr 
 			if result.picker {
 				w.browse()
 			}
+			if result.retryOffer != nil && !result.clearEntries && w.ctx.Err() == nil {
+				w.confirmRetry(result.retryOffer)
+			}
 		default:
 		}
 		return 0
@@ -317,6 +340,7 @@ func (w *window) setBusy(b bool) {
 	proc("EnableWindow", w.controls[idCancel], 1-enabled)
 }
 func (w *window) work(fn func(context.Context) update) {
+	w.workCanceled = false
 	w.setBusy(true)
 	ctx, cancel := context.WithCancel(w.ctx)
 	w.workCancel = cancel
@@ -334,14 +358,20 @@ func (w *window) work(fn func(context.Context) update) {
 }
 func (w *window) discover(saved string) {
 	w.work(func(ctx context.Context) update {
+		var session desktop.Session
+		var sessionErr error
 		if !w.restored {
-			_ = w.client.Restore(ctx)
+			session, sessionErr = restoreSession(ctx, w.client)
 			w.restored = true
+		} else {
+			session, sessionErr = w.client.Session(ctx)
 		}
-		session, sessionErr := w.client.Session(ctx)
 		candidates, err := platform.Candidates()
 		result := discovery.Find(ctx, discovery.OSReader{}, saved, candidates)
 		message := strings.Join(result.Warnings, "\r\n")
+		if sessionErr != nil && !errors.Is(sessionErr, desktop.ErrLogin) {
+			message += "\r\n" + sessionErr.Error()
+		}
 		if err != nil {
 			message += "\r\nWindows 문서 폴더를 확인하지 못했습니다."
 		}
@@ -395,6 +425,9 @@ func (w *window) browse() {
 }
 func (w *window) command(id int) {
 	if id == idCancel {
+		if w.busy {
+			w.workCanceled = true
+		}
 		if w.workCancel != nil {
 			w.workCancel()
 		}
@@ -500,20 +533,18 @@ func (w *window) render() {
 			} else if row.Selected >= 0 {
 				status = "선택 안 됨"
 			}
-			if saved := w.states[f.Path]; saved != "" {
-				status = saved
-			}
+			completed, hasCompletion := w.completedFiles[f.Path]
+			status = candidateStatus(f, status, w.states[f.Path], completed, hasCompletion)
 			add(fmt.Sprintf("%s | %s | %d 바이트 | %s | %s", row.ID, f.Name, f.Size, f.ModTime.Format("2006-01-02 15:04:05"), status), choice{i, j})
 		}
 	}
 	send(w.controls[idResults], 0x194, uintptr(w.scale(2200)), 0)
 	summary := fmt.Sprintf("선택 %d개 · 로그인 필요", len(app.Selected(w.rows)))
-	if w.deviceID != "" {
+	if w.hasCredentials {
 		summary = fmt.Sprintf("선택 %d개 · 연결 정보 있음 · LLVY 로그인으로 상태 확인", len(app.Selected(w.rows)))
 	}
 	if w.session != nil {
-		s := w.session
-		summary = fmt.Sprintf("%s · 선택 %d개 · 잔여 %d개 (계정 %d/전체 %d) · 확인 %s", s.Account.Name, len(app.Selected(w.rows)), min(s.Quota.Account.Remaining, s.Quota.Global.Remaining), s.Quota.Account.Remaining, s.Quota.Global.Remaining, s.Quota.AsOf.Local().Format("15:04:05"))
+		summary = sessionSummary(*w.session, len(app.Selected(w.rows)))
 	}
 	setText(w.controls[4], summary)
 }

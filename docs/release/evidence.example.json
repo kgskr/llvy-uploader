@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "clientCommit": "REPLACE_WITH_TESTED_CLIENT_COMMIT",
+  "version": "1.2.3",
+  "origin": "https://server.example.invalid",
+  "contractCommit": "f6c218f8d9b0476623b73dc75579722c8872d479",
+  "contractSha256": {
+    "protocol.json": "604d4074b96986fe2383a19a0fd473a97b7747517c78adc2a8edb2376df80d1c",
+    "schema.json": "7e5e3716f589c8de9328acbfe424417399097f0e1185541d1d9962e89a143739",
+    "fixtures.json": "0478287bd2cfcfd6b9a36f6f81e953afde589ffc5f2eeebce4ddf892d4ea27e5"
+  },
+  "serverCommit": "REPLACE_WITH_DEPLOYED_SERVER_COMMIT",
+  "deploymentUrl": "https://deployment.example.invalid",
+  "checks": {
+    "serverCheck": {
+      "status": "pending",
+      "evidenceUrl": "https://evidence.example.invalid/serverCheck"
+    },
+    "serverOpenSpec": {
+      "status": "pending",
+      "evidenceUrl": "https://evidence.example.invalid/serverOpenSpec"
+    },
+    "postgresAuthorizationRace": {
+      "status": "pending",
+      "evidenceUrl": "https://evidence.example.invalid/postgresAuthorizationRace"
+    },
+    "windows10": {
+      "status": "pending",
+      "evidenceUrl": "https://evidence.example.invalid/windows10"
+    },
+    "windows11": {
+      "status": "pending",
+      "evidenceUrl": "https://evidence.example.invalid/windows11"
+    },
+    "discordLogin": {
+      "status": "pending",
+      "evidenceUrl": "https://evidence.example.invalid/discordLogin"
+    },
+    "blobPublicPrivate": {
+      "status": "pending",
+      "evidenceUrl": "https://evidence.example.invalid/blobPublicPrivate"
+    },
+    "replayDuplicateBrowser": {
+      "status": "pending",
+      "evidenceUrl": "https://evidence.example.invalid/replayDuplicateBrowser"
+    },
+    "revocation": {
+      "status": "pending",
+      "evidenceUrl": "https://evidence.example.invalid/revocation"
+    }
+  }
+}

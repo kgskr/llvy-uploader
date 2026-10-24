@@ -300,3 +300,23 @@ func TestDuplicateJSONHeaderNames(t *testing.T) {
 		}
 	}
 }
+
+func TestSessionRoles(t *testing.T) {
+	for _, role := range []string{"uploader", "admin", "owner", "viewer", "unknown", ""} {
+		t.Run(role, func(t *testing.T) {
+			c := connected(t, func(w http.ResponseWriter, r *http.Request) {
+				v := Session{Protocol: Protocol, DeviceSessionID: fixtureID, MaxUploadBytes: 64 << 20}
+				v.Account.Role = role
+				jsonResponse(w, v)
+			})
+			got, err := c.Session(context.Background())
+			allowed := role == "uploader" || role == "admin" || role == "owner"
+			if allowed && (err != nil || got.Account.Role != role) {
+				t.Fatalf("valid role %s: %v", role, err)
+			}
+			if !allowed && !errors.Is(err, ErrContract) {
+				t.Fatalf("accepted role %s: %v", role, err)
+			}
+		})
+	}
+}

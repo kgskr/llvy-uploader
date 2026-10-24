@@ -20,7 +20,7 @@ func (w *window) layout() {
 	for axis, page := range []int{int(bounds.Right), int(bounds.Bottom)} {
 		length, position := w.scale(1040), &w.scrollX
 		if axis == 1 {
-			length, position = w.scale(690), &w.scrollY
+			length, position = w.scale(738), &w.scrollY
 		}
 		*position = max(0, min(*position, length-page))
 		info := scrollInfo{Size: uint32(unsafe.Sizeof(scrollInfo{})), Mask: 1 | 2 | 4 | 8, Max: int32(length - 1), Page: uint32(max(0, page)), Pos: int32(*position)}

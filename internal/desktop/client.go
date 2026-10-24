@@ -39,6 +39,14 @@ func New(origin string, development bool, vault Vault) (*Client, error) {
 }
 func (c *Client) Origin() string { return c.origin }
 
+// HasCredentials also covers restoration before the device identity is known.
+// It does not establish current server authority.
+func (c *Client) HasCredentials() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.credentials.RefreshToken != ""
+}
+
 // DeviceSessionID identifies locally retained credentials, not current server
 // authority. Only Session and authorized operations verify that authority.
 func (c *Client) DeviceSessionID() string {
@@ -146,6 +154,12 @@ func (c *Client) refreshLocked(ctx context.Context) error {
 	}
 	var next Credentials
 	if err := c.do(ctx, "POST", "auth/refresh", map[string]string{"refreshToken": old.RefreshToken}, &next, "", ""); err != nil {
+		var api *APIError
+		// This exact server rejection precedes rotation. All other failures
+		// may hide a consumed token, so they must still require a new login.
+		if errors.As(err, &api) && api.Status == http.StatusTooManyRequests && api.Code == "rate_limited" {
+			return err
+		}
 		c.clear()
 		return ErrLogin
 	}
@@ -251,7 +265,7 @@ func (c *Client) Close(ctx context.Context) error {
 func (c *Client) Session(ctx context.Context) (Session, error) {
 	var v Session
 	err := c.authorized(ctx, "GET", "session", nil, &v, "")
-	if err == nil && (v.Protocol != Protocol || !uuidPattern.MatchString(v.DeviceSessionID) || (v.Account.Role != "admin" && v.Account.Role != "owner") || v.MaxUploadBytes != 64<<20 || v.Quota.Account.Remaining < 0 || v.Quota.Global.Remaining < 0) {
+	if err == nil && (v.Protocol != Protocol || !uuidPattern.MatchString(v.DeviceSessionID) || (v.Account.Role != "uploader" && v.Account.Role != "admin" && v.Account.Role != "owner") || v.MaxUploadBytes != 64<<20 || v.Quota.Account.Remaining < 0 || v.Quota.Global.Remaining < 0) {
 		err = ErrContract
 	}
 	return v, err

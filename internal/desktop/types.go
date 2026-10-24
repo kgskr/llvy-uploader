@@ -3,6 +3,7 @@ package desktop
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -21,6 +22,18 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string {
+	message := e.message()
+	if e.Status == 429 && e.RetryAfter > 0 {
+		seconds := e.RetryAfter / time.Second
+		if e.RetryAfter%time.Second != 0 {
+			seconds++
+		}
+		message += fmt.Sprintf(" · 최소 %d초 후 다시 시도하세요", seconds)
+	}
+	return message
+}
+
+func (e *APIError) message() string {
 	switch e.Code {
 	case "quota_exhausted":
 		return "예약 한도 소진 — 한도 갱신 시각을 확인하세요"

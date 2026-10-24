@@ -53,12 +53,21 @@ func TestPinnedServerContract(t *testing.T) {
 	if err := json.Unmarshal(raw, &fixtures); err != nil {
 		t.Fatal(err)
 	}
-	var session Session
-	if err := json.Unmarshal(fixtures["session"], &session); err != nil {
-		t.Fatal(err)
-	}
-	if session.Protocol != Protocol || session.Quota.Account.Remaining != 9 || session.MaxUploadBytes != 64<<20 {
-		t.Fatal("session mismatch")
+	for _, name := range []string{"session", "uploaderSession"} {
+		var session Session
+		if err := json.Unmarshal(fixtures[name], &session); err != nil {
+			t.Fatal(err)
+		}
+		if session.Protocol != Protocol || session.Quota.Account.Remaining != 9 || session.MaxUploadBytes != 64<<20 {
+			t.Fatal("session mismatch")
+		}
+		expected := "admin"
+		if name == "uploaderSession" {
+			expected = "uploader"
+		}
+		if session.Account.Role != expected {
+			t.Fatalf("%s role mismatch", name)
+		}
 	}
 	for _, name := range []string{"completed", "duplicate", "processing", "unknown"} {
 		var result Result

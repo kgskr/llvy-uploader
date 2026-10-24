@@ -16,10 +16,21 @@ try {
     go -C tools tool go-winres make --in $resourcePath --out ../cmd/llvy-uploader/rsrc --arch amd64
     if ($LASTEXITCODE -ne 0) { throw 'Resource generation failed' }
     New-Item -ItemType Directory -Force dist | Out-Null
+    Copy-Item THIRD_PARTY_NOTICES.txt dist/THIRD_PARTY_NOTICES.txt -Force
+    Remove-Item dist/release-evidence.json -ErrorAction SilentlyContinue
     $exePath = Join-Path dist $versionInfo.FileName
     $sourceCommit = git rev-parse --verify HEAD 2>$null
     if ($LASTEXITCODE -ne 0) { $sourceCommit = 'uncommitted' }
     if (git status --porcelain) { $sourceCommit += '-dirty' }
+    if (-not [string]::IsNullOrEmpty($env:LLVY_RELEASE_EVIDENCE_JSON)) {
+        $env:RELEASE_VERSION = $Version
+        $env:SOURCE_COMMIT = $sourceCommit
+        $env:RELEASE_EVIDENCE_OUTPUT = 'dist/release-evidence.json'
+        try {
+            go run ./scripts/validate-release
+            if ($LASTEXITCODE -ne 0) { throw 'Release acceptance evidence failed' }
+        } finally { Remove-Item Env:RELEASE_EVIDENCE_OUTPUT -ErrorAction SilentlyContinue }
+    }
     $env:CGO_ENABLED = '0'
     $env:GOOS = 'windows'
     $env:GOARCH = 'amd64'
@@ -28,7 +39,8 @@ try {
     (Get-FileHash $exePath -Algorithm SHA256).Hash.ToLower() + '  ' + $versionInfo.FileName | Set-Content dist/SHA256SUMS.txt
     go version -m $exePath | Set-Content dist/build-info.txt
     if ($LASTEXITCODE -ne 0) { throw 'Build information extraction failed' }
-    "Version: $Version`nFile: $($versionInfo.FileName)`nSource: $sourceCommit`nServer origin: $serverOrigin`nUnconfigured self-test only: $([string]::IsNullOrEmpty($serverOrigin))`nStatus: unsigned development build; real PC and external acceptance pending" | Set-Content dist/provenance.txt
+    $acceptance = if (Test-Path dist/release-evidence.json) { 'reviewed acceptance: release-evidence.json' } else { 'development build; real PC and external acceptance pending; publication blocked' }
+    "Version: $Version`nFile: $($versionInfo.FileName)`nSource: $sourceCommit`nServer origin: $serverOrigin`nUnconfigured self-test only: $([string]::IsNullOrEmpty($serverOrigin))`nStatus: unsigned; $acceptance" | Set-Content dist/provenance.txt
 } finally {
     Remove-Item $resourcePath -ErrorAction SilentlyContinue
     Remove-Item cmd/llvy-uploader/rsrc_windows_amd64.syso -ErrorAction SilentlyContinue

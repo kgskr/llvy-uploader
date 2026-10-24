@@ -63,6 +63,9 @@ jobs:
       packages: write
     env:
       LLVY_SERVER_ORIGIN: ${{ vars.LLVY_SERVER_ORIGIN }}
+      LLVY_RELEASE_EVIDENCE_JSON: ${{ vars.LLVY_RELEASE_EVIDENCE_JSON }}
+      RELEASE_VERSION: ${{ needs.linux.outputs.version }}
+      SOURCE_COMMIT: ${{ needs.linux.outputs.commit }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -76,6 +79,8 @@ jobs:
             tools/go.sum
       - name: Require configured HTTPS server origin
         run: go run ./scripts/validate-origin
+      - name: Require reviewed server and real-device acceptance
+        run: go run ./scripts/validate-release
       - name: Validate release versions and build scripts
         shell: pwsh
         run: ./scripts/test-build-scripts.ps1

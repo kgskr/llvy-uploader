@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"llvy-uploader/internal/app"
 	"llvy-uploader/internal/desktop"
+	"llvy-uploader/internal/platform"
 	"runtime"
 	"time"
 	"unsafe"
@@ -46,10 +47,12 @@ func (w *window) upload(retry bool) {
 			return
 		}
 		file := w.rows[choice.row].Candidates[choice.candidate]
-		files = nil
-		if e := w.entries[file.Path]; e != nil && e.Result.State != "completed" && e.Result.State != "duplicate" {
-			files = append(files, file)
+		if request := selectRetry(w.entries, file, w.client.DeviceSessionID()); request != nil {
+			w.work(func(ctx context.Context) update {
+				return retrySelected(ctx, diagnosticClient{w.client, w.store}, request, false, w.retryProgress())
+			})
 		}
+		return
 	}
 	if len(files) == 0 {
 		Alert("업로드할 파일을 선택하세요.")
@@ -58,17 +61,24 @@ func (w *window) upload(retry bool) {
 	// Capture entries before launching: only this worker mutates entries until done.
 	entries := make([]*desktop.Entry, 0, len(files))
 	for _, file := range files {
+		previous := w.entries[file.Path]
 		e := desktop.SelectEntry(w.entries, file)
+		if e != previous {
+			delete(w.states, file.Path)
+			delete(w.completedFiles, file.Path)
+		}
 		entries = append(entries, e)
 	}
 	w.work(func(ctx context.Context) update {
 		session, err := w.client.Session(ctx)
 		if err != nil {
+			recordResult(w.store, platform.EventAuthentication, err)
 			return update{keepRows: true, message: err.Error(), signedOut: errorsIsLogin(err)}
 		}
 		remaining := min(session.Quota.Account.Remaining, session.Quota.Global.Remaining)
 		ready, deferred := desktop.QuotaSelection(entries, remaining)
 		var lastProgress time.Time
+		refreshSnapshot := true
 		message := "업로드 작업을 마쳤습니다. 중복과 실패도 예약 한도를 사용합니다."
 		if deferred > 0 {
 			message = fmt.Sprintf("새 예약 %d개는 현재 잔여 %d개를 초과하여 보류했습니다. 파일 선택 수를 줄이세요. 기존 예약은 복구를 진행합니다.", deferred, remaining)
@@ -77,7 +87,7 @@ func (w *window) upload(retry bool) {
 			if ctx.Err() != nil {
 				break
 			}
-			err := w.client.Upload(ctx, entry, func(e *desktop.Entry, stage string, sent, total int64) {
+			err := (diagnosticClient{w.client, w.store}).Upload(ctx, entry, func(e *desktop.Entry, stage string, sent, total int64) {
 				if time.Since(lastProgress) < 150*time.Millisecond && sent < total {
 					return
 				}
@@ -98,25 +108,59 @@ func (w *window) upload(retry bool) {
 			entry.Message = state
 			w.progress(entry.File.Path, state)
 			if desktop.PauseQueue(err) {
+				refreshSnapshot = !refreshThrottled(err)
 				message = "큐를 멈췄습니다. " + state
 				break
 			}
 		}
-		snapshot, err := w.client.Session(ctx)
-		if err == nil {
-			session = snapshot
+		if refreshSnapshot {
+			snapshot, lookupErr := w.client.Session(ctx)
+			err = lookupErr
+			if err == nil {
+				session = snapshot
+			}
 		}
 		// Final status map is copied by the UI thread via rows rendering after worker completion.
-		if session.Quota.Account.ResetAt != nil {
-			message += "\r\n계정 한도 갱신: " + session.Quota.Account.ResetAt.Local().Format("2006-01-02 15:04:05")
-		}
-		if session.Quota.Global.ResetAt != nil {
-			message += " · 전체 한도 갱신: " + session.Quota.Global.ResetAt.Local().Format("2006-01-02 15:04:05")
-		}
+		message += "\r\n" + quotaResetMessage(session)
 		return update{keepRows: true, session: &session, message: message, signedOut: errorsIsLogin(err), queueDone: true}
 	})
 }
 func errorsIsLogin(err error) bool { return err == desktop.ErrLogin }
+
+func (w *window) retryProgress() desktop.Progress {
+	var last time.Time
+	return func(e *desktop.Entry, stage string, sent, total int64) {
+		if time.Since(last) < 150*time.Millisecond && sent < total {
+			return
+		}
+		last = time.Now()
+		percent := int64(0)
+		if total > 0 {
+			percent = sent * 100 / total
+		}
+		w.progress(e.File.Path, fmt.Sprintf("%s · %s %d%%", e.File.Name, stage, percent))
+	}
+}
+
+// Called only by the UI thread after the recovery worker has stopped.
+func (w *window) confirmRetry(request *retryRequest) {
+	if w.client.DeviceSessionID() != request.deviceID || w.entries[request.file.Path] != request.entry {
+		return
+	}
+	message := wide(request.file.Name + "\r\n" + request.entry.Message + "\r\n\r\n새 예약으로 다시 업로드하시겠습니까?\r\n새 예약 1회를 사용하며 중복·실패도 한도를 소비합니다. 결과가 불명확하면 기존 경기 등록 여부를 먼저 확인하세요.")
+	title := wide("새 예약으로 다시 시도")
+	w.setBusy(true)
+	answer := proc("MessageBoxW", w.hwnd, uintptr(unsafe.Pointer(message)), uintptr(unsafe.Pointer(title)), 0x134) // YESNO, warning, default No
+	runtime.KeepAlive(message)
+	runtime.KeepAlive(title)
+	w.setBusy(false)
+	if answer != 6 || w.ctx.Err() != nil {
+		return
+	}
+	w.work(func(ctx context.Context) update {
+		return retrySelected(ctx, diagnosticClient{w.client, w.store}, request, true, w.retryProgress())
+	})
+}
 
 func (w *window) openGame() {
 	i := int(int32(send(w.controls[idResults], 0x188, 0, 0)))
@@ -129,7 +173,7 @@ func (w *window) openGame() {
 	}
 	file := w.rows[choice.row].Candidates[choice.candidate]
 	entry := w.entries[file.Path]
-	if entry == nil || (entry.Result.State != "completed" && entry.Result.State != "duplicate") {
+	if entry == nil || !entry.Succeeded() || !desktop.SameFile(entry.File, file) {
 		return
 	}
 	if err := openBrowser(w.client.Origin() + entry.Result.GamePath); err != nil {
